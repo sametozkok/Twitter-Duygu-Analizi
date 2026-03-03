@@ -1,0 +1,8 @@
+beautifulsoup4
+matplotlib
+requests
+selenium
+torch
+transformers
+undetected-chromedriver
+jupyter
