@@ -1,8 +1,8 @@
-beautifulsoup4
-matplotlib
+streamlit
 requests
-selenium
-torch
+beautifulsoup4
+lxml
 transformers
-undetected-chromedriver
-jupyter
+torch
+plotly
+python-dotenv
