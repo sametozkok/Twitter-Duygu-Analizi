@@ -1,0 +1,11 @@
+{
+  "model": "savasy/bert-base-turkish-sentiment-cased",
+  "toplam": 73,
+  "pozitif": 37,
+  "notr": 4,
+  "negatif": 32,
+  "pozitif_oran": 50.68,
+  "notr_oran": 5.48,
+  "negatif_oran": 43.84,
+  "sarcasm_flip_sayisi": 0
+}

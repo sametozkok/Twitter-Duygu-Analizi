@@ -17,6 +17,5 @@ env/
 Thumbs.db
 .vscode/
 
-# Local outputs (isteğe göre kaldırılabilir)
-data/*.json
+# Local outputs
 !data/.gitkeep

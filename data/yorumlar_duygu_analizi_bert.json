@@ -1,0 +1,659 @@
+[
+  {
+    "kullanici": "kafamagorehu",
+    "yorum": "bu ne anlatmaya çalışıyor",
+    "duygu": "negatif",
+    "guven": 0.9944,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9944
+  },
+  {
+    "kullanici": "ensar_halicii",
+    "yorum": "Bu (adami) ciddiye alan varmi daha ?",
+    "duygu": "negatif",
+    "guven": 0.9689,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9689
+  },
+  {
+    "kullanici": "Atillatektek",
+    "yorum": "Şuna söyleyin çok konuşmasın netenyahu bunun da bir tarafını keser.",
+    "duygu": "pozitif",
+    "guven": 0.9043,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9043
+  },
+  {
+    "kullanici": "ErtSew_",
+    "yorum": "Ciddi olamazzzzsssııınnnn....\nAbi ne kullanıyon bana da ver😂",
+    "duygu": "negatif",
+    "guven": 0.7647,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.7647
+  },
+  {
+    "kullanici": "adimisenko",
+    "yorum": "Ayyy sus be sen git yat uyu geç oldu dede :)",
+    "duygu": "pozitif",
+    "guven": 0.9999,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9999
+  },
+  {
+    "kullanici": "dmr8x8",
+    "yorum": "Biz anlayamamıştık bizi aydınlattığı iyi oldu🤪\nBu herifin saçmasapan açıklamalarından bıktık arkadaş, siyaset sahnesinden bi çekilse keşke artık",
+    "duygu": "negatif",
+    "guven": 0.9985,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9985
+  },
+  {
+    "kullanici": "marlborotouchq",
+    "yorum": "Kral abd ye laf söyletmemek için nasılda kıvranıyor 😂",
+    "duygu": "pozitif",
+    "guven": 0.7939,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.7939
+  },
+  {
+    "kullanici": "BarisA73215",
+    "yorum": "Bunlar da ABD hariç herkese laf söylüyor nasılsa karşı taraftan bir karşılığı yok",
+    "duygu": "negatif",
+    "guven": 0.9561,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9561
+  },
+  {
+    "kullanici": "emraharas4558",
+    "yorum": "Abd ye laf soylemiyor ama farkinda misiniz ? 🤣",
+    "duygu": "pozitif",
+    "guven": 0.9732,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9732
+  },
+  {
+    "kullanici": "varolus35",
+    "yorum": "ABD ye laf söylememenin çevirisi 🤣🤣🤣",
+    "duygu": "pozitif",
+    "guven": 0.7996,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.7996
+  },
+  {
+    "kullanici": "Gizemdu9w",
+    "yorum": "Şaka ypıyon hiç farketmemiştik sağol ya  öcalan ne yapıyor peki haberin vardir",
+    "duygu": "pozitif",
+    "guven": 0.9066,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9066
+  },
+  {
+    "kullanici": "Kontakborsaci",
+    "yorum": "Saldırı'yı Abd yapmamış mı ? Anlayamadım anlayan arkadaşlar yardımcı olursa sevinirim.",
+    "duygu": "negatif",
+    "guven": 0.9827,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9827
+  },
+  {
+    "kullanici": "xSadeYatirimci",
+    "yorum": "Oha bunu biz nasıl düşünemedil bu adam bir dahi!",
+    "duygu": "pozitif",
+    "guven": 0.9957,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9957
+  },
+  {
+    "kullanici": "burhan_obk",
+    "yorum": "Övdün mü gömdün mü ya da tam eleştirecekken çark mı ettin anlamadık valla",
+    "duygu": "negatif",
+    "guven": 0.9908,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9908
+  },
+  {
+    "kullanici": "Justina1587469",
+    "yorum": "Bahçeli, olayı doğrudan İsrail’in sorumluluğuna bağlıyor ve sert bir eleştiri yapıyor.",
+    "duygu": "negatif",
+    "guven": 0.9656,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9656
+  },
+  {
+    "kullanici": "SonayCanzkan1",
+    "yorum": "Amerikanın suçu yok yani doğru mu anladım 😁",
+    "duygu": "pozitif",
+    "guven": 0.9969,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9969
+  },
+  {
+    "kullanici": "Hanefi2112",
+    "yorum": "Ortalık karışacak biz de çok büyük zarar göreceğiz",
+    "duygu": "negatif",
+    "guven": 0.9953,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9953
+  },
+  {
+    "kullanici": "AliSaripinar2",
+    "yorum": "Bunu soyleyende terore destek çıkıyor",
+    "duygu": "negatif",
+    "guven": 0.8021,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.8021
+  },
+  {
+    "kullanici": "CelikYuksel8891",
+    "yorum": "Vay canina öylemiymis 😅",
+    "duygu": "pozitif",
+    "guven": 0.9873,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9873
+  },
+  {
+    "kullanici": "businesist",
+    "yorum": "Hayret la sen tahmin edemedin mi bunu",
+    "duygu": "pozitif",
+    "guven": 0.9534,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9534
+  },
+  {
+    "kullanici": "kbeuaben",
+    "yorum": "Su deniz seviy3sinde 100 derecede kaynıyor de de düşüp bayilalim burda.",
+    "duygu": "negatif",
+    "guven": 0.9628,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9628
+  },
+  {
+    "kullanici": "asibirbey",
+    "yorum": "ABD ye direkt olarak söz söylemeye çekinen  bilge Reis",
+    "duygu": "pozitif",
+    "guven": 0.8861,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.8861
+  },
+  {
+    "kullanici": "Abdullah_baglma",
+    "yorum": "Bilge lider maşallah",
+    "duygu": "pozitif",
+    "guven": 0.9919,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9919
+  },
+  {
+    "kullanici": "Mtnft34",
+    "yorum": "Bu nece bir tespittir",
+    "duygu": "negatif",
+    "guven": 0.9863,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9863
+  },
+  {
+    "kullanici": "FehmiHfb",
+    "yorum": "Biz yıllarca bilge lider dedik buna ya. Utanıyorum",
+    "duygu": "negatif",
+    "guven": 0.9921,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9921
+  },
+  {
+    "kullanici": "adiilata",
+    "yorum": "Reis bir dur sen 😀",
+    "duygu": "pozitif",
+    "guven": 0.9968,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9968
+  },
+  {
+    "kullanici": "Sleyman85477184",
+    "yorum": "Bizim berberde aynısını dedi bugün",
+    "duygu": "pozitif",
+    "guven": 0.9002,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9002
+  },
+  {
+    "kullanici": "Soylum7",
+    "yorum": "Reis sen olmasan ne yapardık",
+    "duygu": "notr",
+    "guven": 0.5826,
+    "kaynak": "low_confidence",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.5826
+  },
+  {
+    "kullanici": "OguzhanSoganci",
+    "yorum": "ABD sütten çıkmış AK kaşık mı şimdi🧐",
+    "duygu": "negatif",
+    "guven": 0.6484,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.6484
+  },
+  {
+    "kullanici": "BurakAtsfb",
+    "yorum": "Onuda affedersin sen bize saldırırsa",
+    "duygu": "negatif",
+    "guven": 0.6538,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.6538
+  },
+  {
+    "kullanici": "inci_gokturkkk",
+    "yorum": "İsraile kim yardım ediyor kimin sayesinde orta doğuda kıyım yaptığını söylemesini beklemiyorduk elbette",
+    "duygu": "negatif",
+    "guven": 0.8943,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.8943
+  },
+  {
+    "kullanici": "fnrzncsvr",
+    "yorum": "Abd'yi eleştirmemek için takla atacak bu yaşta :D",
+    "duygu": "pozitif",
+    "guven": 0.9999,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9999
+  },
+  {
+    "kullanici": "oldraenn",
+    "yorum": "Terör devleti İsrail'in desteklediği Öcalan'a af isteyen bahçeli konuşmasın.",
+    "duygu": "notr",
+    "guven": 0.5756,
+    "kaynak": "low_confidence",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.5756
+  },
+  {
+    "kullanici": "Ozinskiii",
+    "yorum": "Ya 40 yıllık terörist başına kurucu önder dediniz İsrail’de barış ülkesi olursa şaşırmayız böyle konuşmayın şimdiden",
+    "duygu": "pozitif",
+    "guven": 0.6971,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.6971
+  },
+  {
+    "kullanici": "misgibikokar",
+    "yorum": "Bi sen eksiktin konuşmayan devletin bekası",
+    "duygu": "pozitif",
+    "guven": 0.8856,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.8856
+  },
+  {
+    "kullanici": "inevi_kemal",
+    "yorum": "Alla ala😂😂 içimizdede terörist dediği yılların kavgasını yaptığınada gardaşım dedi neyse yarın onada der",
+    "duygu": "pozitif",
+    "guven": 0.9715,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9715
+  },
+  {
+    "kullanici": "galaxytp",
+    "yorum": "Hahaha ABD'yi temize çekiyor utanmadan... \nGerçekten düş yakamızdan be adam",
+    "duygu": "pozitif",
+    "guven": 0.7275,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.7275
+  },
+  {
+    "kullanici": "ramazanbal1903",
+    "yorum": "Yarın çıkar İsrail in haklarını savunur.",
+    "duygu": "negatif",
+    "guven": 0.7417,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.7417
+  },
+  {
+    "kullanici": "Dayko74",
+    "yorum": "Vay mq nasıl anlamış böyle olduğunu . Vay anasını be",
+    "duygu": "negatif",
+    "guven": 0.9376,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9376
+  },
+  {
+    "kullanici": "OnurSezer5316",
+    "yorum": "Gtün yiyosa abd ye laf ette görelim hadi",
+    "duygu": "pozitif",
+    "guven": 0.6897,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.6897
+  },
+  {
+    "kullanici": "burhankara23848",
+    "yorum": "Bugün terör devleti diyor, yarın barış devleti der mi?",
+    "duygu": "negatif",
+    "guven": 0.6168,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.6168
+  },
+  {
+    "kullanici": "SizoParanoid",
+    "yorum": "Dert etme abi. Bebeklerimizin katledilmesi emrini veren terörist başını kurucu önder ilan edip barış elçisi yaptığımız gibi terör devletini de yakında sulh devleti ilan ederiz olur biter.",
+    "duygu": "pozitif",
+    "guven": 0.7311,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.7311
+  },
+  {
+    "kullanici": "tevfikbir",
+    "yorum": "Siz teröristleri affetmeyi iyi bilirsiniz",
+    "duygu": "pozitif",
+    "guven": 0.7974,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.7974
+  },
+  {
+    "kullanici": "taneruykun",
+    "yorum": "Oha tespite bak bravooo 👏👏👏",
+    "duygu": "pozitif",
+    "guven": 0.9943,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9943
+  },
+  {
+    "kullanici": "cemarici1",
+    "yorum": "Amerikanın yanındayız de yüz karası",
+    "duygu": "negatif",
+    "guven": 0.9989,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9989
+  },
+  {
+    "kullanici": "ceylan_gor90453",
+    "yorum": "ABD yaptı ABD! \nbildiğin yada görmek istemediğin siyonist ağababan!",
+    "duygu": "negatif",
+    "guven": 0.9407,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9407
+  },
+  {
+    "kullanici": "gokhanaltunbas",
+    "yorum": "Terör mü dedin sen apocu seni",
+    "duygu": "negatif",
+    "guven": 0.6703,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.6703
+  },
+  {
+    "kullanici": "Cemile19881",
+    "yorum": "Dik duruşlu onurlu omurgalı müslümanlar 😂",
+    "duygu": "pozitif",
+    "guven": 0.675,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.675
+  },
+  {
+    "kullanici": "MehnetHazi",
+    "yorum": "terör devleti diyor İsrail için apo denen piç teroristidi de  meclise çagırıyor !",
+    "duygu": "negatif",
+    "guven": 0.7546,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.7546
+  },
+  {
+    "kullanici": "bbiillggee99",
+    "yorum": "Bence her parti lideri konuşmasın bu konu hakkında. Kendimizi savaşın ortasında bulmayalım sonra",
+    "duygu": "pozitif",
+    "guven": 0.8244,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.8244
+  },
+  {
+    "kullanici": "gunnngurkan",
+    "yorum": "Allah aşkına sen sus yeminle pronter dışında cümle kuramazsin",
+    "duygu": "pozitif",
+    "guven": 0.9721,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9721
+  },
+  {
+    "kullanici": "emrec4kmak",
+    "yorum": "Vay canına",
+    "duygu": "pozitif",
+    "guven": 0.9906,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9906
+  },
+  {
+    "kullanici": "salkimmmmm",
+    "yorum": "Sus lan vatan haini",
+    "duygu": "negatif",
+    "guven": 0.996,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.996
+  },
+  {
+    "kullanici": "ctrlaltdellben",
+    "yorum": "Şey geldi aklıma\n \"Bin cefalar etsen almam üstüme \nGayet şirin geldi dillerin dostum\"...",
+    "duygu": "negatif",
+    "guven": 0.6092,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.6092
+  },
+  {
+    "kullanici": "ra_omerr",
+    "yorum": "İnanılmaz bir tespit bravo",
+    "duygu": "pozitif",
+    "guven": 0.9907,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9907
+  },
+  {
+    "kullanici": "avcilarhaber34",
+    "yorum": "Devlet Bey haklı",
+    "duygu": "negatif",
+    "guven": 0.8576,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.8576
+  },
+  {
+    "kullanici": "SakDincer75017",
+    "yorum": "🤔👍",
+    "duygu": "pozitif",
+    "guven": 0.9846,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9846
+  },
+  {
+    "kullanici": "Oguzlos",
+    "yorum": "Bu devlet başkanları neyle besleniyor da bu kadar uzun yaşıyorlar biz 30 umuzda ölüp gidiyoz",
+    "duygu": "negatif",
+    "guven": 0.9281,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9281
+  },
+  {
+    "kullanici": "FatihDusunuyor",
+    "yorum": "Seni şöyle bi kenaramı alsak.",
+    "duygu": "negatif",
+    "guven": 0.6783,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.6783
+  },
+  {
+    "kullanici": "FenerliHitler07",
+    "yorum": "Siz karışmayın şu savaşa",
+    "duygu": "negatif",
+    "guven": 0.6578,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.6578
+  },
+  {
+    "kullanici": "Taci7979",
+    "yorum": "Şaka yapıyorsun",
+    "duygu": "negatif",
+    "guven": 0.9262,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9262
+  },
+  {
+    "kullanici": "krsk_kaset",
+    "yorum": "Bunu herkes farkında zaten.",
+    "duygu": "pozitif",
+    "guven": 0.9619,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9619
+  },
+  {
+    "kullanici": "ehat_a",
+    "yorum": "İşte feraset işte devlet aklı.",
+    "duygu": "pozitif",
+    "guven": 0.9603,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9603
+  },
+  {
+    "kullanici": "kartal29144",
+    "yorum": "Deha",
+    "duygu": "pozitif",
+    "guven": 0.9946,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9946
+  },
+  {
+    "kullanici": "Aquarius_3494",
+    "yorum": "🤦🏽‍♀️",
+    "duygu": "pozitif",
+    "guven": 0.9922,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9922
+  },
+  {
+    "kullanici": "xLDante1938",
+    "yorum": "trumpumu övüyorsunuz  gerçi apoyu övenlerden ne beklenirki..",
+    "duygu": "notr",
+    "guven": 0.5198,
+    "kaynak": "low_confidence",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.5198
+  },
+  {
+    "kullanici": "abdi9351077",
+    "yorum": "Ortaklarıniz",
+    "duygu": "pozitif",
+    "guven": 0.8106,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.8106
+  },
+  {
+    "kullanici": "zaferyaziyor",
+    "yorum": "Dede internet Explorer gibi",
+    "duygu": "notr",
+    "guven": 0.5045,
+    "kaynak": "low_confidence",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.5045
+  },
+  {
+    "kullanici": "cm_demirci",
+    "yorum": "Azrail işini yap",
+    "duygu": "negatif",
+    "guven": 0.967,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.967
+  },
+  {
+    "kullanici": "Muhamme78742212",
+    "yorum": "Oğlum seni kimse s........ hâlâ konusuyor amk",
+    "duygu": "negatif",
+    "guven": 0.9837,
+    "kaynak": "bert",
+    "bert_etiket": "negatif",
+    "bert_guven": 0.9837
+  },
+  {
+    "kullanici": "KALIPKUTUSU",
+    "yorum": "Anında GT 💪 🔥 🚀",
+    "duygu": "pozitif",
+    "guven": 0.9974,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9974
+  },
+  {
+    "kullanici": "Mrtgvn34",
+    "yorum": "Ahh cidden mi baksen 🫣",
+    "duygu": "pozitif",
+    "guven": 0.9954,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.9954
+  },
+  {
+    "kullanici": "sertoglu10s",
+    "yorum": "Hacı sen git tv de dizi izle\nBilmedigin konulara girme 🤷‍♂️",
+    "duygu": "pozitif",
+    "guven": 0.6429,
+    "kaynak": "bert",
+    "bert_etiket": "pozitif",
+    "bert_guven": 0.6429
+  }
+]
