@@ -84,10 +84,12 @@ pip install -r requirements.txt
 Proje kök dizininde `.env` dosyası oluşturun:
 
 ```env
-GEMINI_API_KEY=your_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+TWITTER_BEARER_TOKEN=your_twitter_bearer_token_here
 ```
 
 Gemini anahtarını Google AI Studio üzerinden alabilirsiniz: https://aistudio.google.com/apikey
+Twitter bearer token değerini kod içerisine **yazmayın**, sadece `.env` üzerinden yönetin.
 
 ## Çalıştırma
 Streamlit uygulamasını başlatın:

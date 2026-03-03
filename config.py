@@ -8,6 +8,9 @@ load_dotenv(_env_path, override=True)
 # ─── Gemini API ───
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
+# ─── Twitter API ───
+TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
+
 # ─── Twitter Scraping ───
 SYNDICATION_URL = "https://syndication.twitter.com/srv/timeline-profile/screen-name/{username}"
 DEFAULT_HEADERS = {

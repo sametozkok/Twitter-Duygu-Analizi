@@ -7,8 +7,10 @@ import json
 import time
 from datetime import datetime
 
-# Twitter public bearer token (web client'tan)
-BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+from config import TWITTER_BEARER_TOKEN
+
+# Twitter bearer token ortam değişkeninden okunur
+BEARER_TOKEN = TWITTER_BEARER_TOKEN
 
 GRAPHQL_USER_BY_SCREEN_NAME = "xmU6X_CKVnQ5lSrCbAmJsg/UserByScreenName"
 GRAPHQL_USER_TWEETS = "V7H0Ap3_Hh2FyS75OCDO3Q/UserTweets"
@@ -58,6 +60,11 @@ _guest_session = {"session": None, "token": None, "time": 0}
 
 def _get_guest_session() -> requests.Session:
     """Guest token ile oturum oluştur (cache'li)."""
+    if not BEARER_TOKEN:
+        raise RuntimeError(
+            "Twitter BEARER token yapılandırılmamış. Lütfen proje kökündeki .env dosyanıza "
+            "TWITTER_BEARER_TOKEN değişkenini ekleyin."
+        )
     now = time.time()
     # Token 15 dakika geçerliliğini korur
     if _guest_session["session"] and (now - _guest_session["time"]) < 840:
