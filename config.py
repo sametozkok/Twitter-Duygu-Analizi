@@ -11,6 +11,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # ─── Twitter API ───
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
 
+# ─── Twitter Cookie Auth (yorum çekme için) ───
+TWITTER_AUTH_TOKEN = os.getenv("TWITTER_AUTH_TOKEN", "")
+TWITTER_CT0 = os.getenv("TWITTER_CT0", "")
+
 # ─── Twitter Scraping ───
 SYNDICATION_URL = "https://syndication.twitter.com/srv/timeline-profile/screen-name/{username}"
 DEFAULT_HEADERS = {

@@ -1,5 +1,6 @@
 """
 Haber Eşleştirme - Google Gemini API ile haberleri karşılaştır
+(Optimizasyon: ön filtreleme, metin budama, duplicate eleme, kompakt prompt)
 """
 import json
 import re
@@ -11,6 +12,18 @@ def _normalize_text(text: str) -> str:
     text = re.sub(r"https?://\S+", " ", text)
     text = re.sub(r"[^\w\sçğıöşüÇĞİÖŞÜ]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _clean_for_api(text: str, max_len: int = 120) -> str:
+    """Tweet metnini API'ye göndermeden önce budayıp kısalt."""
+    text = re.sub(r"https?://\S+", "", text)           # URL kaldır
+    text = re.sub(r"@\w+", "", text)                    # mention kaldır
+    text = re.sub(r"#(\w+)", r"\1", text)               # # işaretini kaldır, kelimeyi bırak
+    text = re.sub(r"[^\w\sçğıöşüÇĞİÖŞÜ.,;:!?'\"-]", "", text)  # emoji/özel karakter
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > max_len:
+        text = text[:max_len].rsplit(" ", 1)[0] + "…"
+    return text
 
 
 def _tokenize_tr(text: str) -> set[str]:
@@ -30,6 +43,70 @@ def _tokenize_tr(text: str) -> set[str]:
             continue
         tokens.append(token)
     return set(tokens)
+
+
+def _dedup_same_channel(tweets: list[dict]) -> list[dict]:
+    """Aynı kanaldan gelen çok benzer tweetleri ele (en uzununu tut)."""
+    by_channel: dict[str, list[dict]] = {}
+    for tw in tweets:
+        by_channel.setdefault(tw["channel"], []).append(tw)
+
+    result = []
+    for channel, ch_tweets in by_channel.items():
+        token_sets = [_tokenize_tr(tw["text"]) for tw in ch_tweets]
+        keep = [True] * len(ch_tweets)
+
+        for i in range(len(ch_tweets)):
+            if not keep[i]:
+                continue
+            for j in range(i + 1, len(ch_tweets)):
+                if not keep[j]:
+                    continue
+                a, b = token_sets[i], token_sets[j]
+                if not a or not b:
+                    continue
+                overlap = len(a & b) / max(1, len(a | b))
+                if overlap >= 0.6:  # %60+ benzerlik → duplicate
+                    # Kısa olanı ele
+                    if len(ch_tweets[i]["text"]) >= len(ch_tweets[j]["text"]):
+                        keep[j] = False
+                    else:
+                        keep[i] = False
+                        break
+
+        result.extend(tw for tw, k in zip(ch_tweets, keep) if k)
+    return result
+
+
+def _prefilter_candidates(all_tweets: list[dict]) -> list[dict]:
+    """Keyword kesişimi ile Gemini'ye gönderilecek aday tweetleri filtrele.
+    
+    En az 1 başka kanaldan bir tweet ile 2+ ortak kelimesi olan tweetleri tut.
+    Hiç eşleşme potansiyeli olmayanları ele.
+    """
+    n = len(all_tweets)
+    if n < 2:
+        return all_tweets
+
+    token_sets = [_tokenize_tr(tw["text"]) for tw in all_tweets]
+    has_potential = [False] * n
+
+    for i in range(n):
+        if has_potential[i]:
+            continue
+        for j in range(i + 1, n):
+            if all_tweets[i]["channel"] == all_tweets[j]["channel"]:
+                continue
+            a, b = token_sets[i], token_sets[j]
+            if not a or not b:
+                continue
+            inter = a & b
+            if len(inter) >= 2:
+                has_potential[i] = True
+                has_potential[j] = True
+
+    filtered = [tw for tw, pot in zip(all_tweets, has_potential) if pot]
+    return filtered if filtered else all_tweets  # Hiç kalmadıysa hepsini gönder
 
 
 def _fallback_match_by_keywords(all_tweets: list[dict], min_channels: int) -> list[dict]:
@@ -213,27 +290,21 @@ GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/{mode
 def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -> list[dict]:
     """Farklı kanallardan gelen tweetleri Gemini ile karşılaştırıp eşle.
     
+    Optimizasyonlar:
+    - Aynı kanaldan gelen benzer tweetler elenir (duplicate)
+    - Keyword ön filtresi ile eşleşme potansiyeli olmayanlar çıkarılır
+    - Tweet metinleri budanıp kısaltılır (token tasarrufu)
+    - Kompakt satır formatı ile prompt boyutu azaltılır
+    
     Args:
         channels_data: fetch_multiple_channels çıktısı
-            [{"username": "x", "tweets": [...]}, ...]
         api_key: Gemini API key
         min_channels: En az kaç kanalda geçmeli (default 2)
     
     Returns:
-        list[dict]: [
-            {
-                "topic": "Haber başlığı/konusu",
-                "tweets": [
-                    {"channel": "pusholder", "tweet_id": "...", "text": "...", "url": "..."},
-                    {"channel": "vaikigundem", "tweet_id": "...", "text": "...", "url": "..."},
-                    ...
-                ],
-                "channel_count": 3
-            },
-            ...
-        ]
+        list[dict]: Eşleşen haber grupları
     """
-    # Tüm tweetleri kanal bilgisiyle birlikte topla
+    # 1) Tüm tweetleri kanal bilgisiyle birlikte topla
     all_tweets = []
     for ch in channels_data:
         username = ch["username"]
@@ -248,32 +319,42 @@ def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -
     if not all_tweets:
         return []
     
-    # Gemini'ye gönderilecek prompt
-    channel_names = [ch["username"] for ch in channels_data]
+    # 2) Aynı kanaldan gelen duplicate tweetleri ele
+    all_tweets = _dedup_same_channel(all_tweets)
     
-    prompt = f"""Aşağıda {len(channel_names)} farklı Twitter haber kanalından ({', '.join(channel_names)}) alınmış toplam {len(all_tweets)} tweet var.
+    # 3) Keyword ön filtresi — eşleşme potansiyeli olmayanları çıkar
+    candidates = _prefilter_candidates(all_tweets)
+    
+    # Aday yoksa fallback
+    if len(candidates) < 2:
+        return _fallback_match_by_keywords(all_tweets, min_channels)
+    
+    # 4) Kompakt prompt oluştur — tweet metinlerini budayarak satır formatında gönder
+    channel_names = list({tw["channel"] for tw in candidates})
+    
+    tweet_lines = []
+    for tw in candidates:
+        clean = _clean_for_api(tw["text"])
+        tweet_lines.append(f'{tw["tweet_id"]}|{tw["channel"]}|{clean}')
+    
+    tweet_block = "\n".join(tweet_lines)
+    
+    prompt = f"""Aşağıda {len(channel_names)} haber kanalından {len(candidates)} tweet var (ID|kanal|metin formatında).
 
-Görevin:
-1. Bu tweetleri konu bazında grupla
-2. Aynı olaydan/haberden bahseden tweetleri eşleştir
-3. Sadece en az {min_channels} farklı kanalda geçen haberleri döndür
-4. Her grup için kısa bir konu başlığı yaz
+KURALLAR:
+- Sadece BİREBİR AYNI olayı/haberi anlatan tweetleri eşleştir
+- "ABD-İran" gibi genel konu benzerliği YETERSİZ, somut olay aynı olmalı
+- Bir gruba aynı kanaldan en fazla 1 tweet koy
+- Her grupta en az {min_channels} FARKLI kanal olmalı
+- Emin olmadığın eşleşmeleri KOYMA
 
-Tweet listesi:
-{json.dumps(all_tweets, ensure_ascii=False, indent=2)}
+{tweet_block}
 
-SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir şey yazma:
-[
-  {{
-    "topic": "Konu başlığı",
-    "tweet_ids": ["id1", "id2", "id3"]
-  }}
-]
-
-Eşleşme bulamazsan boş liste döndür: []
-"""
-
-    # Gemini API çağrısı
+JSON yanıt:
+[{{"topic":"Kısa haber başlığı","tweet_ids":["id1","id2"]}}]
+Eşleşme yoksa: []"""
+    
+    # 5) Gemini API çağrısı
     headers = {"Content-Type": "application/json"}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -285,7 +366,6 @@ Eşleşme bulamazsan boş liste döndür: []
         }
     }
     
-    # Birden fazla model dene (rate limit / uyumluluk için)
     response = None
     last_error = ""
     for model in GEMINI_MODELS:
@@ -301,27 +381,26 @@ Eşleşme bulamazsan boş liste döndür: []
         last_error = f"{model}: {response.status_code} - {response.text[:150]}"
         if response.status_code == 429:
             import time
-            time.sleep(2)  # rate limit bekle
+            time.sleep(2)
             continue
         elif response.status_code >= 500:
-            continue  # server error, sonraki modeli dene
+            continue
         else:
-            break  # 400, 401, 403 gibi hatalar için durma
+            break
 
     if response is None or response.status_code != 200:
         raise Exception(f"Gemini API hatası: {last_error}")
     
-    # Yanıtı parse et
+    # 6) Yanıtı parse et
     resp_data = response.json()
     text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
     
     matched_groups = _parse_gemini_json(text)
     
-    # Gemini boş/bozuk sonuç döndürürse fallback uygula
     if not matched_groups:
         return _fallback_match_by_keywords(all_tweets, min_channels)
 
-    # Tweet ID'lerini gerçek tweet verisiyle eşle
+    # 7) Tweet ID'lerini gerçek tweet verisiyle eşle (orijinal all_tweets'ten)
     tweet_map = {tw["tweet_id"]: tw for tw in all_tweets}
     
     results = []
@@ -338,6 +417,16 @@ Eşleşme bulamazsan boş liste döndür: []
                 matched_tweets.append(tw)
                 channels_in_group.add(tw["channel"])
         
+        # Post-processing: Aynı kanaldan birden fazla tweet varsa sadece ilkini tut
+        seen_channels = set()
+        deduped_tweets = []
+        for tw in matched_tweets:
+            if tw["channel"] not in seen_channels:
+                seen_channels.add(tw["channel"])
+                deduped_tweets.append(tw)
+        matched_tweets = deduped_tweets
+        channels_in_group = seen_channels
+        
         if len(channels_in_group) >= min_channels:
             results.append({
                 "topic": topic,
@@ -346,11 +435,9 @@ Eşleşme bulamazsan boş liste döndür: []
                 "channels": list(channels_in_group),
             })
     
-    # Gemini parse oldu ama filtre sonrası boş kaldıysa fallback uygula
     if not results:
         return _fallback_match_by_keywords(all_tweets, min_channels)
 
-    # Kanal sayısına göre sırala (çoktan aza)
     results.sort(key=lambda x: x["channel_count"], reverse=True)
     
     return results
