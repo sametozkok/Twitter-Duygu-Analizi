@@ -5,6 +5,7 @@ import streamlit as st
 import sys
 import os
 import time
+import html
 
 # Proje kök dizinini path'e ekle
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -86,10 +87,12 @@ st.markdown("""
 # ─── Yardımcılar ───
 def render_reply_card(reply: dict):
     likes_str = f" · ❤️ {reply.get('likes', 0)}" if reply.get("likes") else ""
+    safe_user = html.escape(reply.get("user", ""))
+    safe_text = html.escape(reply.get("text", ""))
     st.markdown(
         f"""<div class=\"tweet-card\">
-        <strong>@{reply.get('user', '')}</strong>{likes_str}<br>
-        {reply.get('text', '')}
+        <strong>@{safe_user}</strong>{likes_str}<br>
+        {safe_text}
         </div>""",
         unsafe_allow_html=True,
     )
@@ -97,13 +100,33 @@ def render_reply_card(reply: dict):
 
 def render_emotion_details(items: list[dict]):
     for item in items:
+        safe_user = html.escape(item.get("user", ""))
+        safe_text = html.escape(item.get("text", ""))
         st.markdown(
             f"""<div class=\"tweet-card\">
-            <strong>@{item.get('user', '')}</strong> · {item.get('label', '-')} · %{item.get('score', 0)*100:.1f}<br>
-            {item.get('text', '')}
+            <strong>@{safe_user}</strong> · {item.get('label', '-')} · %{item.get('score', 0)*100:.1f}<br>
+            {safe_text}
             </div>""",
             unsafe_allow_html=True,
         )
+
+
+def _resolve_tweet_id(tweet: dict) -> str:
+    return str(tweet.get("tweet_id") or tweet.get("id") or "").strip()
+
+
+def analyze_group_replies(replies_by_channel: dict) -> tuple[dict, list[str]]:
+    """Run emotion analysis channel-by-channel without crashing whole page."""
+    channel_results = {}
+    errors = []
+
+    for channel, ch_replies in replies_by_channel.items():
+        try:
+            channel_results[channel] = analyze_emotions_for_replies(ch_replies)
+        except Exception as exc:
+            errors.append(f"@{channel}: {exc}")
+
+    return channel_results, errors
 
 
 # ─── Başlık ───
@@ -190,26 +213,36 @@ with st.sidebar:
 st.markdown("### 1) 📡 Kanal Linkleri")
 st.caption("Karşılaştırmak istediğiniz hesap linklerini girin")
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    ch1 = st.text_input("Kanal 1", placeholder="https://x.com/pusholder", key="ch1")
-with col2:
-    ch2 = st.text_input("Kanal 2", placeholder="https://x.com/vaikigundem", key="ch2")
-with col3:
-    ch3 = st.text_input("Kanal 3", placeholder="https://x.com/traborasyon", key="ch3")
+step1, step2, step3 = st.columns(3)
+step1.info("1. Kanal linklerini gir")
+step2.info("2. Tweet ve eşleşmeleri çek")
+step3.info("3. Haber bazlı yorum analizi")
 
-# Ek kanal ekle
-with st.expander("➕ Daha fazla kanal ekle"):
-    extra = st.text_area(
-        "Her satıra bir kanal linki yazın:",
-        placeholder="https://x.com/kanal4\nhttps://x.com/kanal5",
-        height=80,
-    )
+with st.form("channel_form"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        ch1 = st.text_input("Kanal 1", placeholder="https://x.com/pusholder", key="ch1")
+    with col2:
+        ch2 = st.text_input("Kanal 2", placeholder="https://x.com/vaikigundem", key="ch2")
+    with col3:
+        ch3 = st.text_input("Kanal 3", placeholder="https://x.com/traborasyon", key="ch3")
+
+    with st.expander("➕ Daha fazla kanal ekle"):
+        extra = st.text_area(
+            "Her satıra bir kanal linki yazın:",
+            placeholder="https://x.com/kanal4\nhttps://x.com/kanal5",
+            height=80,
+        )
+
+    start_clicked = st.form_submit_button("🚀 Analizi Başlat", type="primary", use_container_width=True)
 
 # Tüm kanalları topla
 channels = [c.strip() for c in [ch1, ch2, ch3] if c.strip()]
 if extra:
     channels += [c.strip() for c in extra.strip().split("\n") if c.strip()]
+
+# Duplicate kanal girişini temizle (ilk görüleni koru)
+channels = list(dict.fromkeys(channels))
 
 # ─── Analiz Butonu ───
 st.divider()
@@ -219,7 +252,7 @@ if "group_results" not in st.session_state:
 if "emotion_results" not in st.session_state:
     st.session_state.emotion_results = {}
 
-if st.button("🚀 Analizi Başlat", type="primary", use_container_width=True):
+if start_clicked:
     
     if len(channels) < min_channels_for_match:
         st.error(f"En az {min_channels_for_match} kanal girmelisiniz! (Ayarlar > Ortak haber eşiği)")
@@ -316,8 +349,13 @@ if st.button("🚀 Analizi Başlat", type="primary", use_container_width=True):
                 
                 st.write(f"📌 Haber {group_idx + 1}: {group['topic']}")
                 for tw in group["tweets"]:
+                    tweet_id = _resolve_tweet_id(tw)
+                    if not tweet_id:
+                        st.warning(f"  @{tw.get('channel', '-')}: tweet kimliği bulunamadı, atlandı")
+                        continue
+
                     replies = fetch_tweet_replies(
-                        tw["tweet_id"], tw["channel"],
+                        tweet_id, tw.get("channel", ""),
                         auth_token=twitter_auth_token,
                         ct0=twitter_ct0,
                         max_replies=reply_count,
@@ -369,6 +407,31 @@ if st.session_state.group_results:
     s1.metric("Ortak Haber", total_groups)
     s2.metric("Toplam Yorum", total_replies)
     s3.metric("Analiz Tamamlanan", analyzed_groups)
+
+    can_run_bulk = any(group.get("replies_by_channel") for group in st.session_state.group_results)
+    run_bulk = st.button(
+        "🧠 Tüm Haberlerin Yorumlarını Analiz Et",
+        use_container_width=True,
+        disabled=not can_run_bulk,
+        help="Yorumu olan tüm haberler için kanal bazlı duygu analizi başlatır.",
+    )
+
+    if run_bulk:
+        with st.status("🧪 Tüm haberler analiz ediliyor...", expanded=True):
+            completed = 0
+            for group_idx, group in enumerate(st.session_state.group_results):
+                replies_by_channel = group.get("replies_by_channel", {})
+                if not replies_by_channel:
+                    continue
+
+                channel_results, errors = analyze_group_replies(replies_by_channel)
+                if channel_results:
+                    st.session_state.emotion_results[group_idx] = channel_results
+                    completed += 1
+                if errors:
+                    st.write(f"⚠️ Haber {group_idx + 1}: bazı kanallar atlandı")
+
+            st.success(f"✅ Toplam {completed} haber için analiz tamamlandı.")
     
     for group_idx, group in enumerate(st.session_state.group_results):
         replies_by_channel = group.get("replies_by_channel", {})
@@ -415,11 +478,18 @@ if st.session_state.group_results:
 
                     if analyze_clicked:
                         with st.status("🧪 Yorum duygu analizi çalışıyor...", expanded=True):
-                            channel_results = {}
-                            for channel, ch_replies in replies_by_channel.items():
-                                channel_results[channel] = analyze_emotions_for_replies(ch_replies)
-                            st.session_state.emotion_results[group_idx] = channel_results
-                        st.success("✅ Haber bazlı yorum analizi tamamlandı.")
+                            channel_results, errors = analyze_group_replies(replies_by_channel)
+
+                            if channel_results:
+                                st.session_state.emotion_results[group_idx] = channel_results
+                                st.success("✅ Haber bazlı yorum analizi tamamlandı.")
+                            else:
+                                st.warning("Analiz için uygun yorum bulunamadı.")
+
+                            if errors:
+                                st.warning("Bazı kanallar analiz edilemedi:")
+                                for err in errors:
+                                    st.write(f"- {err}")
 
                     if group_idx in st.session_state.emotion_results:
                         st.markdown("#### 📈 Kanal Bazlı Ortalama Skor")
