@@ -58,6 +58,29 @@ TWEET_FEATURES = {
 _guest_session = {"session": None, "token": None, "time": 0}
 
 
+def _get_public_tweet_metrics(tweet_id: str) -> dict:
+    """CDN endpoint'ten tweet metriklerini fallback olarak cek."""
+    try:
+        url = f"https://cdn.syndication.twimg.com/tweet-result?id={tweet_id}&lang=tr&token=x"
+        response = requests.get(
+            url,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=10,
+        )
+        if response.status_code != 200:
+            return {}
+
+        data = response.json()
+        return {
+            "likes": int(data.get("favorite_count") or 0),
+            "retweets": int(data.get("retweet_count") or 0),
+            "replies": int(data.get("reply_count") or 0),
+            "quotes": int(data.get("quote_count") or 0),
+        }
+    except Exception:
+        return {}
+
+
 def _get_guest_session() -> requests.Session:
     """Guest token ile oturum oluştur (cache'li)."""
     if not BEARER_TOKEN:
@@ -183,6 +206,20 @@ def fetch_user_tweets(username_or_url: str, count: int = 10) -> dict:
                 except Exception:
                     date_formatted = created
 
+                likes = int(legacy.get("favorite_count", 0) or 0)
+                retweets = int(legacy.get("retweet_count", 0) or 0)
+                replies = int(legacy.get("reply_count", 0) or 0)
+                quotes = int(legacy.get("quote_count", 0) or 0)
+
+                # Bazi GraphQL yanitlarinda metrikler 0 gelebiliyor. Bu durumda
+                # public CDN endpoint'ten fallback metrik denemesi yap.
+                if likes == 0 and retweets == 0 and replies == 0:
+                    fallback_metrics = _get_public_tweet_metrics(tweet_id)
+                    likes = int(fallback_metrics.get("likes", likes) or likes)
+                    retweets = int(fallback_metrics.get("retweets", retweets) or retweets)
+                    replies = int(fallback_metrics.get("replies", replies) or replies)
+                    quotes = int(fallback_metrics.get("quotes", quotes) or quotes)
+
                 # Medya
                 media = []
                 for m in legacy.get("entities", {}).get("media", []):
@@ -198,10 +235,10 @@ def fetch_user_tweets(username_or_url: str, count: int = 10) -> dict:
                     "clean_text": clean_text,
                     "date": created,
                     "date_formatted": date_formatted,
-                    "likes": legacy.get("favorite_count", 0),
-                    "retweets": legacy.get("retweet_count", 0),
-                    "replies": legacy.get("reply_count", 0),
-                    "quotes": legacy.get("quote_count", 0),
+                    "likes": likes,
+                    "retweets": retweets,
+                    "replies": replies,
+                    "quotes": quotes,
                     "url": f"https://x.com/{username}/status/{tweet_id}",
                     "media": media,
                 })

@@ -2,6 +2,8 @@
 
 Bu proje, birden fazla X/Twitter haber kanalından tweet çekip ortak haberleri eşleştirir ve ilgili tweet yanıtları üzerinde Türkçe duygu analizi yapar.
 
+Yeni geliştirme hattı `frontend/` klasöründeki React uygulaması ve `backend/api/` klasöründeki FastAPI katmanı üzerinden ilerliyor.
+
 ## İçindekiler
 - [Genel Bakış](#genel-bakış)
 - [Özellikler](#özellikler)
@@ -10,8 +12,11 @@ Bu proje, birden fazla X/Twitter haber kanalından tweet çekip ortak haberleri 
 - [Kurulum](#kurulum)
 - [Yapılandırma (.env)](#yapılandırma-env)
 - [Çalıştırma](#çalıştırma)
+- [Canlıya Alma (Render + Vercel)](#canlıya-alma-render--vercel)
 - [Nasıl Çalışır?](#nasıl-çalışır)
 - [Test](#test)
+- [Proje Haritası](#proje-haritası)
+- [Duygu Analizi Yol Haritası](#duygu-analizi-yol-haritası)
 - [Sorun Giderme](#sorun-giderme)
 - [Sık Kullanılan Komutlar](#sık-kullanılan-komutlar)
 - [Push Öncesi Kontrol Listesi](#push-öncesi-kontrol-listesi)
@@ -22,7 +27,7 @@ Uygulama akışı 3 ana adımdan oluşur:
 2. Tweetler Gemini API ile konu bazında eşleştirilir (gerekirse anahtar kelime fallback).
 3. Eşleşen tweetlerin yorumları toplanır ve Türkçe BERT modeli ile pozitif/negatif sınıflandırılır.
 
-Arayüz Streamlit ile hazırlanmıştır ve sonuçları etkileşimli olarak gösterir.
+Yeni arayüz React ile hazırlanıyor.
 
 ## Özellikler
 - Birden fazla kanal desteği (en az 2 kanal).
@@ -30,20 +35,16 @@ Arayüz Streamlit ile hazırlanmıştır ve sonuçları etkileşimli olarak gös
 - Ortak haber eşleştirme (LLM + fallback eşleştirme).
 - Yorum toplama (syndication/CDN yöntemleri).
 - Türkçe duygu analizi (`savasy/bert-base-turkish-sentiment-cased`).
-- Pie chart ve detay listesi ile sonuç görselleştirme.
+- Modern React arayüz, temiz panel yapısı ve bileşen tabanlı ekranlar.
 
 ## Proje Yapısı
 ```text
 Twitter/
-├─ frontend/
-│  └─ app.py                    # Streamlit arayüzü
 ├─ backend/
-│  ├─ scraper/
-│  │  ├─ tweets.py              # Tweet çekme
-│  │  └─ replies.py             # Yorum çekme
-│  └─ analyzer/
-│     ├─ matcher.py             # Haber eşleştirme (Gemini + fallback)
-│     └─ sentiment.py           # Türkçe BERT duygu analizi
+│  ├─ api/                      # FastAPI giriş noktası ve servis katmanı
+│  ├─ analyzer/                 # Duygu, emotion ve eşleştirme motoru
+│  └─ scraper/                  # Tweet ve yorum çekme
+├─ frontend/                    # React + Vite arayüz
 ├─ data/                        # Örnek/çıktı JSON dosyaları
 ├─ config.py                    # Ortam ve sabitler
 ├─ test_pipeline.py             # Uçtan uca pipeline testi
@@ -52,7 +53,7 @@ Twitter/
 ```
 
 ## Teknolojiler
-- **Arayüz:** Streamlit
+- **Arayüz:** React + Vite
 - **HTTP & Parsing:** requests, BeautifulSoup
 - **LLM Eşleştirme:** Google Gemini API
 - **NLP:** transformers, torch
@@ -81,7 +82,7 @@ pip install -r requirements.txt
 ```
 
 ## Yapılandırma (.env)
-Proje kök dizininde `.env` dosyası oluşturun:
+Proje kök dizininde `.env` dosyası oluşturun (isterseniz `.env.example` dosyasını kopyalayabilirsiniz):
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
@@ -90,16 +91,49 @@ TWITTER_BEARER_TOKEN=your_twitter_bearer_token_here
 
 Gemini anahtarını Google AI Studio üzerinden alabilirsiniz: https://aistudio.google.com/apikey
 Twitter bearer token değerini kod içerisine **yazmayın**, sadece `.env` üzerinden yönetin.
+Gemini API key alanı frontend'de gösterilmez; eşleştirme yalnızca backend tarafındaki `.env` değişkeni ile çalışır.
 
 ## Çalıştırma
-Streamlit uygulamasını başlatın:
+Yeni mimaride iki süreç bulunur:
 
 ```bash
-streamlit run frontend/app.py
+# API
+uvicorn backend.api.main:app --reload --port 8000
+
+# React frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-Başarılı çalıştığında terminalde genellikle şu adrese benzer bir link görürsünüz:
-- `http://localhost:8501`
+API varsayılan olarak `http://localhost:8000`, frontend ise `http://localhost:5173` üzerinde çalışır.
+
+## Canlıya Alma (Render + Vercel)
+
+Bu repo mevcut haliyle su sekilde deploy edilmeye hazir:
+
+### 1) Backend (Render)
+- Render'da repo baglayin.
+- Kök dizindeki `render.yaml` dosyasi otomatik okunur.
+- Build komutu: `pip install -r requirements.txt`
+- Start komutu: `uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT`
+- Ortam degiskenleri:
+	- `GEMINI_API_KEY`
+	- `TWITTER_BEARER_TOKEN`
+	- `CORS_ORIGINS` = frontend adresiniz (ornek: `https://your-app.vercel.app`)
+
+### 2) Frontend (Vercel)
+- Vercel'de ayni repoyu import edin.
+- Root Directory olarak `frontend` secin.
+- Build komutu: `npm run build`
+- Output directory: `dist`
+- Environment Variable:
+	- `VITE_API_BASE_URL` = Render backend adresiniz (ornek: `https://your-backend.onrender.com`)
+- `frontend/vercel.json` SPA rewrite ayari icerir.
+
+### 3) Son kontrol
+- Frontend acildiktan sonra API saglik endpointi dogrulayin:
+	- `<RENDER_URL>/health` -> `{"status":"ok"}`
 
 ## Nasıl Çalışır?
 
@@ -115,7 +149,7 @@ Başarılı çalıştığında terminalde genellikle şu adrese benzer bir link 
 ### 3) Haber eşleştirme
 - Tweetler Gemini API’ye gönderilir.
 - Ortak konuya ait tweet grupları döner.
-- Model çıktısı bozuk/boş ise keyword tabanlı fallback devreye girer.
+- Model çıktısı bozuk/boş ise kural tabanlı fallback devreye girer.
 
 ### 4) Yorumlar + duygu analizi
 - Eşleşen tweetler için yorumlar toplanır.
@@ -133,6 +167,16 @@ Bu test:
 - Örnek kanallardan tweet çeker,
 - Gemini ile eşleştirmeyi dener,
 - Konsola özet basar.
+
+## Proje Haritası
+Projenin klasör bazlı detaylı açıklamasını burada bulabilirsiniz:
+
+- `docs/project-structure.md`
+
+## Duygu Analizi Yol Haritası
+Yorumlardan duygu analizi için adım adım uygulama planı burada:
+
+- `docs/sentiment-roadmap.md`
 
 ## Sorun Giderme
 
@@ -153,14 +197,21 @@ Bu test:
 
 ## Sık Kullanılan Komutlar
 ```bash
-# Bağımlılık kur
+# Python bağımlılık kur
 pip install -r requirements.txt
 
-# Uygulamayı başlat
-streamlit run frontend/app.py
+# API'yi başlat
+uvicorn backend.api.main:app --reload --port 8000
+
+# Yeni frontend'i başlat
+cd frontend
+npm run dev
 
 # Pipeline testini çalıştır
 python test_pipeline.py
+
+# (Yeni) Yorum duygu algoritmalarini karsilastirma endpoint'i
+# POST /api/sentiment/compare
 ```
 
 ## Push Öncesi Kontrol Listesi

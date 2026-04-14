@@ -44,6 +44,91 @@ TWEET_DETAIL_FEATURES = {
 GRAPHQL_TWEET_DETAIL = "16nxv6mC_2VaBvBwY2V85g/TweetDetail"
 
 
+def _safe_int(value: object) -> int:
+    try:
+        if value is None:
+            return 0
+        return int(str(value).replace(",", "").strip())
+    except Exception:
+        return 0
+
+
+def _extract_view_count(tweet_obj: dict, legacy: dict) -> int:
+    views = tweet_obj.get("views", {}) if isinstance(tweet_obj, dict) else {}
+    if isinstance(views, dict):
+        count = views.get("count") or views.get("state")
+        numeric = _safe_int(count)
+        if numeric > 0:
+            return numeric
+
+    return _safe_int(legacy.get("view_count"))
+
+
+def _extract_user_fields(raw_user: dict | str | None, fallback_user: str = "") -> tuple[str, str]:
+    """Farkli endpoint formatlarindan username/name alanlarini guvenli cikar."""
+    if isinstance(raw_user, str):
+        user = raw_user.strip().lstrip("@")
+        if not user and fallback_user:
+            user = str(fallback_user).strip().lstrip("@")
+        return user, (f"@{user}" if user else "")
+
+    if not isinstance(raw_user, dict):
+        raw_user = {}
+
+    user = (
+        raw_user.get("screen_name")
+        or raw_user.get("screenName")
+        or raw_user.get("username")
+        or raw_user.get("user_name")
+        or raw_user.get("handle")
+        or raw_user.get("userName")
+        or raw_user.get("nick")
+        or raw_user.get("login")
+        or ""
+    )
+    name = (
+        raw_user.get("name")
+        or raw_user.get("displayName")
+        or raw_user.get("display_name")
+        or raw_user.get("full_name")
+        or ""
+    )
+
+    user = str(user).strip().lstrip("@")
+    name = str(name).strip()
+
+    # Bazı yanıt formatlarında username yerine sayısal user id gelebilir.
+    # Bunları kullanıcı adı gibi göstermeyelim.
+    if user and re.fullmatch(r"\d{8,}", user):
+        user = ""
+    if name and re.fullmatch(r"\d{8,}", name):
+        name = ""
+
+    if not user and fallback_user:
+        user = str(fallback_user).strip().lstrip("@")
+
+    if not name and user:
+        name = f"@{user}"
+
+    return user, name
+
+
+def _resolve_user_identity(*candidates: object) -> tuple[str, str]:
+    """Birden fazla olası user objesinden ilk geçerli kullanıcı kimliğini bul."""
+    for cand in candidates:
+        user, name = _extract_user_fields(cand)
+        if user:
+            return user, name
+
+    # username yoksa en azından isim varsa onu döndür
+    for cand in candidates:
+        _user, name = _extract_user_fields(cand)
+        if name:
+            return "", name
+
+    return "", ""
+
+
 def _build_auth_session(auth_token: str, ct0: str) -> requests.Session:
     """Cookie-based auth ile session oluştur."""
     session = requests.Session()
@@ -199,13 +284,42 @@ def _parse_tweet_result(item: dict, original_tweet_id: str) -> dict | None:
     # Kullanıcı bilgisi
     core = tw.get("core", {}).get("user_results", {}).get("result", {})
     user_legacy = core.get("legacy", {})
+    user, name = _resolve_user_identity(
+        user_legacy,
+        core,
+        core.get("core", {}),
+        core.get("profile", {}),
+        tw.get("user", {}),
+        tw.get("author", {}),
+    )
+
+    # Bazı şemalarda fallback username farklı alanlarda olabilir.
+    if not user:
+        fallback_user = (
+            core.get("screen_name")
+            or core.get("username")
+            or core.get("userName")
+            or tw.get("screen_name")
+            or tw.get("username")
+            or ""
+    )
+        user, name = _extract_user_fields({"screen_name": fallback_user, "name": name}, fallback_user=fallback_user)
+    likes = _safe_int(legacy.get("favorite_count"))
+    retweets = _safe_int(legacy.get("retweet_count"))
+    replies_count = _safe_int(legacy.get("reply_count"))
+    quotes = _safe_int(legacy.get("quote_count"))
+    views = _extract_view_count(tw, legacy)
     
     return {
         "text": text,
-        "user": user_legacy.get("screen_name", ""),
-        "name": user_legacy.get("name", ""),
+        "user": user,
+        "name": name,
         "date": legacy.get("created_at", ""),
-        "likes": legacy.get("favorite_count", 0),
+        "likes": likes,
+        "retweets": retweets,
+        "replies": replies_count,
+        "quotes": quotes,
+        "views": views,
     }
 
 
@@ -244,13 +358,25 @@ def _try_syndication_conversation(tweet_id: str) -> list[dict]:
                         text = re.sub(r'@\w+\s*', '', text).strip()
                         
                         if text and len(text) > 2:
-                            user = tw.get("user", {})
+                            user, name = _extract_user_fields(
+                                tw.get("user", {}),
+                                fallback_user=(
+                                    tw.get("screen_name")
+                                    or tw.get("username")
+                                    or tw.get("user_name")
+                                    or ""
+                                ),
+                            )
                             replies.append({
                                 "text": text,
-                                "user": user.get("screen_name", ""),
-                                "name": user.get("name", ""),
+                                "user": user,
+                                "name": name,
                                 "date": tw.get("created_at", ""),
-                                "likes": tw.get("favorite_count", 0),
+                                "likes": _safe_int(tw.get("favorite_count", 0)),
+                                "retweets": _safe_int(tw.get("retweet_count", 0)),
+                                "replies": _safe_int(tw.get("reply_count", 0)),
+                                "quotes": _safe_int(tw.get("quote_count", 0)),
+                                "views": _safe_int(tw.get("view_count", 0)),
                             })
     except Exception:
         pass
@@ -280,13 +406,20 @@ def _try_cdn_tweet(tweet_id: str) -> list[dict]:
                 text = re.sub(r'@\w+\s*', '', text).strip()
                 
                 if text and len(text) > 2:
-                    user = tweet.get("user", {})
+                    user, name = _extract_user_fields(
+                        tweet.get("user", {}),
+                        fallback_user=tweet.get("screen_name", ""),
+                    )
                     replies.append({
                         "text": text,
-                        "user": user.get("screen_name", ""),
-                        "name": user.get("name", ""),
+                        "user": user,
+                        "name": name,
                         "date": tweet.get("created_at", ""),
-                        "likes": tweet.get("favorite_count", 0),
+                        "likes": _safe_int(tweet.get("favorite_count", 0)),
+                        "retweets": _safe_int(tweet.get("retweet_count", 0)),
+                        "replies": _safe_int(tweet.get("reply_count", 0)),
+                        "quotes": _safe_int(tweet.get("quote_count", 0)),
+                        "views": _safe_int(tweet.get("view_count", 0)),
                     })
     except Exception:
         pass

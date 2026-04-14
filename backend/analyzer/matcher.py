@@ -314,6 +314,10 @@ def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -
                 "tweet_id": tw["id"],
                 "text": tw["clean_text"],
                 "url": tw["url"],
+                "likes": tw.get("likes", 0),
+                "replies": tw.get("replies", 0),
+                "retweets": tw.get("retweets", 0),
+                "date_formatted": tw.get("date_formatted", ""),
             })
     
     if not all_tweets:
@@ -388,8 +392,10 @@ Eşleşme yoksa: []"""
         else:
             break
 
+    # Gemini kotası (429) veya geçici API hatalarında akışı düşürme.
+    # Uygulama çalışmaya devam etsin diye keyword fallback'e geç.
     if response is None or response.status_code != 200:
-        raise Exception(f"Gemini API hatası: {last_error}")
+        return _fallback_match_by_keywords(all_tweets, min_channels)
     
     # 6) Yanıtı parse et
     resp_data = response.json()
