@@ -8,9 +8,6 @@ import re
 import json
 from bs4 import BeautifulSoup
 
-from config import TWITTER_BEARER_TOKEN
-
-
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
 }
@@ -129,13 +126,13 @@ def _resolve_user_identity(*candidates: object) -> tuple[str, str]:
     return "", ""
 
 
-def _build_auth_session(auth_token: str, ct0: str) -> requests.Session:
+def _build_auth_session(auth_token: str, ct0: str, bearer_token: str) -> requests.Session:
     """Cookie-based auth ile session oluştur."""
     session = requests.Session()
     session.cookies.set("auth_token", auth_token, domain=".x.com")
     session.cookies.set("ct0", ct0, domain=".x.com")
     session.headers.update({
-        "Authorization": f"Bearer {TWITTER_BEARER_TOKEN}",
+        "Authorization": f"Bearer {bearer_token}",
         "User-Agent": HEADERS["User-Agent"],
         "x-csrf-token": ct0,
         "x-twitter-auth-type": "OAuth2Session",
@@ -148,6 +145,7 @@ def _build_auth_session(auth_token: str, ct0: str) -> requests.Session:
 
 def fetch_tweet_replies(tweet_id: str, username: str = "",
                         auth_token: str = "", ct0: str = "",
+                        bearer_token: str = "",
                         max_replies: int = 20) -> list[dict]:
     """Bir tweet'in yanıtlarını çeker.
     
@@ -159,6 +157,7 @@ def fetch_tweet_replies(tweet_id: str, username: str = "",
         username: Kullanıcı adı (opsiyonel)
         auth_token: Twitter auth_token cookie değeri
         ct0: Twitter ct0 cookie değeri
+        bearer_token: Twitter authorization bearer header
         max_replies: Maksimum çekilecek yorum sayısı
     
     Returns:
@@ -167,8 +166,8 @@ def fetch_tweet_replies(tweet_id: str, username: str = "",
     replies = []
     
     # Yöntem 1: Cookie auth ile GraphQL TweetDetail
-    if auth_token and ct0:
-        replies = _try_graphql_tweet_detail(tweet_id, auth_token, ct0, max_replies)
+    if auth_token and ct0 and bearer_token:
+        replies = _try_graphql_tweet_detail(tweet_id, auth_token, ct0, bearer_token, max_replies)
     
     # Yöntem 2: Syndication embed conversation (auth gerektirmez)
     if not replies:
@@ -181,13 +180,13 @@ def fetch_tweet_replies(tweet_id: str, username: str = "",
     return replies[:max_replies]
 
 
-def _try_graphql_tweet_detail(tweet_id: str, auth_token: str, ct0: str,
+def _try_graphql_tweet_detail(tweet_id: str, auth_token: str, ct0: str, bearer_token: str,
                                max_replies: int = 20) -> list[dict]:
     """GraphQL TweetDetail ile yorumları çek (cookie auth gerekir)."""
     replies = []
     
     try:
-        session = _build_auth_session(auth_token, ct0)
+        session = _build_auth_session(auth_token, ct0, bearer_token)
         
         variables = {
             "focalTweetId": tweet_id,

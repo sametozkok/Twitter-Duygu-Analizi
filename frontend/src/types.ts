@@ -49,6 +49,7 @@ export type RepliesRequest = {
   reply_count: number
   twitter_auth_token: string
   twitter_ct0: string
+  twitter_bearer_token: string
 }
 
 export type RepliesResponse = {

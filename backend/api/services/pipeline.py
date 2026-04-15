@@ -72,6 +72,7 @@ def run_replies_pipeline(request: RepliesRequest) -> RepliesResponse:
                 str(tweet.get("channel", "")),
                 auth_token=request.twitter_auth_token,
                 ct0=request.twitter_ct0,
+                bearer_token=request.twitter_bearer_token,
                 max_replies=request.reply_count,
             )
 
@@ -195,6 +196,7 @@ def run_analysis_pipeline(request: AnalysisRequest) -> AnalysisResponse:
             reply_count=request.reply_count,
             twitter_auth_token=request.twitter_auth_token,
             twitter_ct0=request.twitter_ct0,
+            twitter_bearer_token=request.twitter_bearer_token,
         )
     )
 

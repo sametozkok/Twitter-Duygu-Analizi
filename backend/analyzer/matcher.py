@@ -5,6 +5,7 @@ Haber Eşleştirme - Google Gemini API ile haberleri karşılaştır
 import json
 import re
 import requests
+import time
 
 
 def _normalize_text(text: str) -> str:
@@ -45,6 +46,109 @@ def _tokenize_tr(text: str) -> set[str]:
     return set(tokens)
 
 
+def _tweet_quality_score(tweet: dict) -> float:
+    """Gruplama sırasında kanal başına en güçlü tweeti seçmek için kalite skoru."""
+    text_len = len(str(tweet.get("text", "")))
+    likes = max(0, int(tweet.get("likes", 0) or 0))
+    replies = max(0, int(tweet.get("replies", 0) or 0))
+    retweets = max(0, int(tweet.get("retweets", 0) or 0))
+    return (likes * 0.1) + (replies * 0.35) + (retweets * 0.25) + (text_len * 0.03)
+
+
+def _pair_similarity_score(tokens_a: set[str], tokens_b: set[str]) -> float:
+    if not tokens_a or not tokens_b:
+        return 0.0
+
+    intersection = tokens_a & tokens_b
+    if not intersection:
+        return 0.0
+
+    union = tokens_a | tokens_b
+    jaccard = len(intersection) / max(1, len(union))
+    long_overlap = sum(1 for token in intersection if len(token) >= 5)
+
+    return jaccard + min(0.18, long_overlap * 0.04) + (0.06 if len(intersection) >= 3 else 0.0)
+
+
+def _is_pair_same_event(tokens_a: set[str], tokens_b: set[str]) -> bool:
+    if not tokens_a or not tokens_b:
+        return False
+
+    intersection = tokens_a & tokens_b
+    if len(intersection) >= 5:
+        return True
+
+    score = _pair_similarity_score(tokens_a, tokens_b)
+    long_overlap = sum(1 for token in intersection if len(token) >= 5)
+
+    if len(intersection) >= 3 and score >= 0.2:
+        return True
+    if len(intersection) >= 2 and long_overlap >= 2 and score >= 0.24:
+        return True
+
+    return False
+
+
+def _dedup_channels_by_quality(tweets: list[dict]) -> list[dict]:
+    """Aynı grupta aynı kanaldan birden fazla tweet varsa en kaliteli olanı tut."""
+    best_by_channel: dict[str, dict] = {}
+    for tw in tweets:
+        channel = tw.get("channel", "")
+        if channel not in best_by_channel or _tweet_quality_score(tw) > _tweet_quality_score(best_by_channel[channel]):
+            best_by_channel[channel] = tw
+
+    return list(best_by_channel.values())
+
+
+def _is_group_coherent(tweets: list[dict], min_channels: int) -> bool:
+    """Gemini çıktısını korumak için grup içi olay tutarlılığı kontrolü."""
+    if len(tweets) < min_channels:
+        return False
+
+    channels = {tw.get("channel", "") for tw in tweets}
+    if len(channels) < min_channels:
+        return False
+
+    token_sets = [_tokenize_tr(str(tw.get("text", ""))) for tw in tweets]
+    n = len(token_sets)
+
+    if n < 2:
+        return False
+
+    links = [0] * n
+    strong_pairs = 0
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            if _is_pair_same_event(token_sets[i], token_sets[j]):
+                links[i] += 1
+                links[j] += 1
+                strong_pairs += 1
+
+    # Her tweetin en az bir güçlü partneri olmalı.
+    if any(link_count == 0 for link_count in links):
+        return False
+
+    # Grup boyutuna göre minimum güçlü bağ.
+    if strong_pairs < max(1, n - 1):
+        return False
+
+    return True
+
+
+def _safe_float(value) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if parsed < 0:
+        return 0.0
+    if parsed > 1:
+        return 1.0
+    return parsed
+
+
 def _dedup_same_channel(tweets: list[dict]) -> list[dict]:
     """Aynı kanaldan gelen çok benzer tweetleri ele (en uzununu tut)."""
     by_channel: dict[str, list[dict]] = {}
@@ -63,12 +167,25 @@ def _dedup_same_channel(tweets: list[dict]) -> list[dict]:
                 if not keep[j]:
                     continue
                 a, b = token_sets[i], token_sets[j]
-                if not a or not b:
-                    continue
-                overlap = len(a & b) / max(1, len(a | b))
-                if overlap >= 0.6:  # %60+ benzerlik → duplicate
-                    # Kısa olanı ele
-                    if len(ch_tweets[i]["text"]) >= len(ch_tweets[j]["text"]):
+                normalized_a = _normalize_text(ch_tweets[i]["text"])
+                normalized_b = _normalize_text(ch_tweets[j]["text"])
+
+                overlap = 0.0
+                containment = 0.0
+                if a and b:
+                    overlap = len(a & b) / max(1, len(a | b))
+                    containment = len(a & b) / max(1, min(len(a), len(b)))
+
+                is_near_duplicate = (
+                    normalized_a == normalized_b
+                    or (len(normalized_a) > 24 and normalized_a in normalized_b)
+                    or (len(normalized_b) > 24 and normalized_b in normalized_a)
+                    or overlap >= 0.56
+                    or containment >= 0.76
+                )
+
+                if is_near_duplicate:
+                    if _tweet_quality_score(ch_tweets[i]) >= _tweet_quality_score(ch_tweets[j]):
                         keep[j] = False
                     else:
                         keep[i] = False
@@ -142,7 +259,12 @@ def _fallback_match_by_keywords(all_tweets: list[dict], min_channels: int) -> li
             if len(inter) < 2:
                 continue
             score = len(inter) / max(1, len(a | b))
-            if score >= 0.12 or len(inter) >= 4:
+            long_inter_count = sum(1 for token in inter if len(token) >= 5)
+            if (
+                score >= 0.18
+                or len(inter) >= 5
+                or (len(inter) >= 3 and long_inter_count >= 2 and score >= 0.14)
+            ):
                 union(i, j)
 
     clusters: dict[int, list[int]] = {}
@@ -156,8 +278,12 @@ def _fallback_match_by_keywords(all_tweets: list[dict], min_channels: int) -> li
             continue
 
         cluster_tweets = [all_tweets[i] for i in members]
+        cluster_tweets = _dedup_channels_by_quality(cluster_tweets)
         channels = {tw["channel"] for tw in cluster_tweets}
         if len(channels) < min_channels:
+            continue
+
+        if not _is_group_coherent(cluster_tweets, min_channels):
             continue
 
         common_tokens = None
@@ -343,53 +469,85 @@ def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -
     
     tweet_block = "\n".join(tweet_lines)
     
-    prompt = f"""Aşağıda {len(channel_names)} haber kanalından {len(candidates)} tweet var (ID|kanal|metin formatında).
+    system_instruction = (
+        "Sen haber eşleştirme doğrulama motorusun. "
+        "Yalnızca aynı somut olayı anlatan tweetleri grupla. "
+        "Genel gündem benzerliğini asla eşleşme sayma. "
+        "Şüpheli durumda eşleştirme yapma."
+    )
 
-KURALLAR:
-- Sadece BİREBİR AYNI olayı/haberi anlatan tweetleri eşleştir
-- "ABD-İran" gibi genel konu benzerliği YETERSİZ, somut olay aynı olmalı
-- Bir gruba aynı kanaldan en fazla 1 tweet koy
-- Her grupta en az {min_channels} FARKLI kanal olmalı
-- Emin olmadığın eşleşmeleri KOYMA
+    prompt = f"""Aşağıda {len(channel_names)} haber kanalından {len(candidates)} tweet var (ID|kanal|metin).
 
+DETAYLI DEĞERLENDİRME KURALLARI:
+1) Tweetleri eşleştirmeden önce her tweet için olay imzası çıkar:
+   - ana aktör(ler)
+   - olayın fiili (ne oldu)
+   - bağlam (yer, zaman, resmi açıklama, sayı vb.)
+2) Eşleşme için olay imzasının omurgası aynı olmalı.
+3) Sadece aynı genel konuya ait farklı haberler AYRI kalmalı.
+4) Her grupta aynı kanaldan en fazla 1 tweet olmalı.
+5) Her grupta en az {min_channels} farklı kanal olmalı.
+6) Düşük güvenli eşleşmeleri çıkar. Emin değilsen boş bırak.
+
+Veri:
 {tweet_block}
 
-JSON yanıt:
-[{{"topic":"Kısa haber başlığı","tweet_ids":["id1","id2"]}}]
-Eşleşme yoksa: []"""
+ÇIKTI KURALI:
+- SADECE JSON döndür.
+- Format:
+[{{"topic":"Kısa ve somut haber başlığı","tweet_ids":["id1","id2"],"confidence":0.0}}]
+- confidence 0-1 arasında olmalı.
+- Eşleşme yoksa []"""
     
     # 5) Gemini API çağrısı
     headers = {"Content-Type": "application/json"}
     payload = {
+        "systemInstruction": {
+            "parts": [{"text": system_instruction}]
+        },
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": 0.1,
-            "topP": 0.8,
+            "temperature": 0.0,
+            "topP": 0.7,
             "maxOutputTokens": 4096,
             "responseMimeType": "application/json",
         }
     }
     
     response = None
-    last_error = ""
     for model in GEMINI_MODELS:
         api_url = GEMINI_API_BASE.format(model=model)
-        response = requests.post(
-            f"{api_url}?key={api_key}",
-            headers=headers,
-            json=payload,
-            timeout=60,
-        )
-        if response.status_code == 200:
+
+        # Ağ kopmaları (RemoteDisconnected vb.) için model başına kısa retry uygula.
+        for attempt in range(2):
+            try:
+                response = requests.post(
+                    f"{api_url}?key={api_key}",
+                    headers=headers,
+                    json=payload,
+                    timeout=60,
+                )
+            except requests.RequestException:
+                response = None
+                if attempt == 0:
+                    time.sleep(1)
+                    continue
+                break
+
+            if response.status_code == 200:
+                break
+
+            if response.status_code == 429:
+                time.sleep(2)
+                continue
+
+            if response.status_code >= 500:
+                time.sleep(1)
+                continue
+
             break
-        last_error = f"{model}: {response.status_code} - {response.text[:150]}"
-        if response.status_code == 429:
-            import time
-            time.sleep(2)
-            continue
-        elif response.status_code >= 500:
-            continue
-        else:
+
+        if response is not None and response.status_code == 200:
             break
 
     # Gemini kotası (429) veya geçici API hatalarında akışı düşürme.
@@ -398,42 +556,59 @@ Eşleşme yoksa: []"""
         return _fallback_match_by_keywords(all_tweets, min_channels)
     
     # 6) Yanıtı parse et
-    resp_data = response.json()
-    text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
+    try:
+        resp_data = response.json()
+        text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        return _fallback_match_by_keywords(all_tweets, min_channels)
     
     matched_groups = _parse_gemini_json(text)
     
     if not matched_groups:
         return _fallback_match_by_keywords(all_tweets, min_channels)
 
+    matched_groups = sorted(
+        matched_groups,
+        key=lambda item: _safe_float(item.get("confidence")) or 0.0,
+        reverse=True,
+    )
+
     # 7) Tweet ID'lerini gerçek tweet verisiyle eşle (orijinal all_tweets'ten)
     tweet_map = {tw["tweet_id"]: tw for tw in all_tweets}
     
     results = []
+    used_tweet_ids: set[str] = set()
+    seen_group_keys: set[tuple[str, ...]] = set()
+
     for group in matched_groups:
         topic = group.get("topic", "Bilinmeyen Konu")
         tweet_ids = group.get("tweet_ids", [])
+        confidence = _safe_float(group.get("confidence"))
+
+        if confidence is not None and confidence < 0.72:
+            continue
         
         matched_tweets = []
-        channels_in_group = set()
         
         for tid in tweet_ids:
+            if tid in used_tweet_ids:
+                continue
             if tid in tweet_map:
-                tw = tweet_map[tid]
-                matched_tweets.append(tw)
-                channels_in_group.add(tw["channel"])
+                matched_tweets.append(tweet_map[tid])
         
-        # Post-processing: Aynı kanaldan birden fazla tweet varsa sadece ilkini tut
-        seen_channels = set()
-        deduped_tweets = []
-        for tw in matched_tweets:
-            if tw["channel"] not in seen_channels:
-                seen_channels.add(tw["channel"])
-                deduped_tweets.append(tw)
-        matched_tweets = deduped_tweets
-        channels_in_group = seen_channels
+        matched_tweets = _dedup_channels_by_quality(matched_tweets)
+        channels_in_group = {tw["channel"] for tw in matched_tweets}
+
+        if not _is_group_coherent(matched_tweets, min_channels):
+            continue
+
+        group_key = tuple(sorted(tw["tweet_id"] for tw in matched_tweets if tw.get("tweet_id")))
+        if not group_key or group_key in seen_group_keys:
+            continue
         
         if len(channels_in_group) >= min_channels:
+            seen_group_keys.add(group_key)
+            used_tweet_ids.update(group_key)
             results.append({
                 "topic": topic,
                 "tweets": matched_tweets,

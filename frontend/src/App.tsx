@@ -1,7 +1,5 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useMemo, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
-import { StatCard } from './components/StatCard'
-import { Topbar } from './components/Topbar'
 import { runMatch, runReplies, runSentimentCompare } from './lib/api'
 import type { MatchResponse, RepliesResponse, SentimentCompareResponse, TweetItem } from './types'
 
@@ -72,6 +70,7 @@ export default function App() {
   const [replyCount, setReplyCount] = useState(20)
   const [twitterAuthToken, setTwitterAuthToken] = useState('')
   const [twitterCt0, setTwitterCt0] = useState('')
+  const [twitterBearerToken, setTwitterBearerToken] = useState('')
 
   const [isMatching, setIsMatching] = useState(false)
   const [isFetchingReplies, setIsFetchingReplies] = useState(false)
@@ -92,8 +91,20 @@ export default function App() {
   const selectedGroupIndexSafe = selectedGroupIndex < shownGroups.length ? selectedGroupIndex : 0
   const selectedGroup = shownGroups[selectedGroupIndexSafe] ?? null
   const replyChannelCount = selectedGroup ? Object.keys(selectedGroup.replies_by_channel).length : 0
-  const replyColumns = Math.max(1, Math.min(3, replyChannelCount))
+  const replyColumns = Math.min(3, replyChannelCount)
+  const totalRepliesForGroup = selectedGroup
+    ? Object.values(selectedGroup.replies_by_channel).reduce((sum, arr) => sum + arr.length, 0)
+    : 0
   const selectedCompareGroup = compareResult?.compared_groups.find((group) => group.topic === selectedGroup?.topic) ?? null
+
+  function extractChannelName(url: string): string {
+    const trimmed = url.trim()
+    const match = trimmed.match(/(?:x\.com|twitter\.com)\/(@?[\w]+)/i)
+    if (match) return match[1].replace(/^@/, '')
+    const atMatch = trimmed.match(/^@?([\w]+)$/)
+    if (atMatch) return atMatch[1]
+    return trimmed
+  }
 
   function updateChannel(index: number, value: string) {
     setChannels((prev) => prev.map((item, i) => (i === index ? value : item)))
@@ -155,6 +166,7 @@ export default function App() {
         reply_count: replyCount,
         twitter_auth_token: twitterAuthToken.trim(),
         twitter_ct0: twitterCt0.trim(),
+        twitter_bearer_token: twitterBearerToken.trim(),
       })
       setRepliesResult(response)
       setCompareResult(null)
@@ -204,11 +216,11 @@ export default function App() {
         setTwitterAuthToken={setTwitterAuthToken}
         twitterCt0={twitterCt0}
         setTwitterCt0={setTwitterCt0}
+        twitterBearerToken={twitterBearerToken}
+        setTwitterBearerToken={setTwitterBearerToken}
       />
 
       <main className="main-shell">
-        <Topbar />
-
         <section className="page-grid">
           <section className="channel-section">
             <div className="channel-toolbar">
@@ -216,13 +228,25 @@ export default function App() {
               <button className="ghost-button" type="button" onClick={addChannel}>+ Kanal ekle</button>
             </div>
 
-            <section className="channel-grid">
-              {channels.map((channel, index) => (
-                <section className="channel-card" key={`channel-${index}`}>
-                  <div className="channel-card-head">
-                    <span>Kanal {index + 1}</span>
+            <section className="channel-list">
+              {channels.map((channel, index) => {
+                const displayName = extractChannelName(channel)
+                const hasValue = channel.trim().length > 0
+                return (
+                  <section className="channel-row" key={`channel-${index}`}>
+                    {hasValue && displayName ? (
+                      <span className="channel-name-display">@{displayName}</span>
+                    ) : null}
+                    <input
+                      type="text"
+                      value={channel}
+                      onChange={(event) => updateChannel(index, event.target.value)}
+                      placeholder="kullanıcı adı veya link"
+                      aria-label={`Kanal ${index + 1}`}
+                      className={hasValue && displayName ? 'channel-input-hidden' : ''}
+                    />
                     <button
-                      className="channel-remove"
+                      className="channel-remove-inline"
                       type="button"
                       onClick={() => removeChannel(index)}
                       disabled={channels.length <= 2}
@@ -231,15 +255,9 @@ export default function App() {
                     >
                       ×
                     </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={channel}
-                    onChange={(event) => updateChannel(index, event.target.value)}
-                    placeholder="https://x.com/kullaniciadi"
-                  />
-                </section>
-              ))}
+                  </section>
+                )
+              })}
             </section>
           </section>
 
@@ -254,11 +272,7 @@ export default function App() {
             </section>
           ) : null}
 
-          <section className="summary-grid">
-            <StatCard label="Eşleşen Grup Sayısı" value={String(matchResult?.total_groups ?? 0)} />
-            <StatCard label="Çekilen Yorum Sayısı" value={String(repliesResult?.total_replies ?? 0)} />
-            <StatCard label="Durum" value={repliesResult ? 'yorumlar hazir' : matchResult ? 'eslesmeler hazir' : 'bekliyor'} />
-          </section>
+
 
           {isRepliesReady && (repliesResult?.total_replies ?? 0) === 0 ? (
             <section className="results-panel">
@@ -278,10 +292,21 @@ export default function App() {
             <section className="results-column">
               <div className="results-head">
                 <div>
-                  <h3>Eşleşen Tweet Grupları</h3>
+                  <h3>Eşleşen Tweet Grupları {shownGroups.length > 0 && <span className="head-count">({shownGroups.length})</span>}</h3>
                 </div>
-                <button className="primary-button" type="button" onClick={handleFetchMatches} disabled={isMatching}>
-                  {isMatching ? 'Tweetler çekiliyor...' : 'Tweetleri Çek'}
+                <button
+                  className={`primary-button${isMatching ? ' primary-button-loading' : ''}`}
+                  type="button"
+                  onClick={handleFetchMatches}
+                  disabled={isMatching}
+                  aria-busy={isMatching}
+                >
+                  <span className="button-label">{isMatching ? 'Tweetler çekiliyor...' : 'Tweetleri Çek'}</span>
+                  {isMatching ? (
+                    <span className="button-progress" aria-hidden="true">
+                      <span className="button-progress-bar" />
+                    </span>
+                  ) : null}
                 </button>
               </div>
 
@@ -360,13 +385,13 @@ export default function App() {
             <section className="results-column">
               <div className="results-head">
                 <div>
-                  <h3>Seçili Grubun Yorumları</h3>
+                  <h3>Seçili Grubun Yorumları {totalRepliesForGroup > 0 && <span className="head-count">({totalRepliesForGroup})</span>}</h3>
                 </div>
                 <button
                   className="primary-button"
                   type="button"
                   onClick={handleFetchReplies}
-                  disabled={isFetchingReplies || !matchResult?.matched_groups?.length}
+                  disabled={isFetchingReplies || isMatching || !matchResult?.matched_groups?.length}
                 >
                   {isFetchingReplies ? 'Yorumlar çekiliyor...' : 'Yorumları Çek'}
                 </button>
@@ -381,10 +406,11 @@ export default function App() {
                   <p className="reply-title">{selectedGroup.topic}</p>
                   <div
                     className="reply-channels"
-                    style={{
-                      '--reply-columns': String(replyColumns),
-                      '--reply-channel-count': String(replyChannelCount),
-                    } as CSSProperties}
+                    style={
+                      replyChannelCount <= 3
+                        ? { gridAutoFlow: 'column', gridTemplateColumns: `repeat(${replyChannelCount}, 1fr)` }
+                        : { gridAutoFlow: 'column', gridAutoColumns: `calc((100% - ${(2) * 0.45}rem) / 3)` }
+                    }
                   >
                     {Object.entries(selectedGroup.replies_by_channel).map(([channel, replies]) => (
                       <section className="reply-channel-block" key={`${selectedGroup.topic}-${channel}`}>

@@ -8,6 +8,7 @@ class AnalysisRequest(BaseModel):
     reply_count: int = 20
     twitter_auth_token: str = ""
     twitter_ct0: str = ""
+    twitter_bearer_token: str = ""
 
 
 class MatchRequest(BaseModel):
@@ -31,6 +32,7 @@ class RepliesRequest(BaseModel):
     reply_count: int = 20
     twitter_auth_token: str = ""
     twitter_ct0: str = ""
+    twitter_bearer_token: str = ""
 
 
 class AnalysisResponse(BaseModel):
