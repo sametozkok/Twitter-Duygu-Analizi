@@ -6,4 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  preview: {
+    allowedHosts: ['twitter.mericozkaya.me', 'localhost', '127.0.0.1'],
+  },
 })
