@@ -1,4 +1,1 @@
-export * from './Sidebar'
-export * from './Stepper'
-export * from './StatCard'
-export * from './Topbar'
+// Components are now inlined in App.tsx for the new 3-column dashboard layout.
