@@ -5,7 +5,7 @@ import requests
 import re
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from config import TWITTER_BEARER_TOKEN
 
@@ -202,6 +202,7 @@ def fetch_user_tweets(username_or_url: str, count: int = 10) -> dict:
 
                 try:
                     dt = datetime.strptime(created, "%a %b %d %H:%M:%S %z %Y")
+                    dt = dt + timedelta(hours=3)
                     date_formatted = dt.strftime("%d/%m/%Y %H:%M")
                 except Exception:
                     date_formatted = created

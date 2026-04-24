@@ -25,3 +25,5 @@ data/analysis_runs/
 # Frontend artifacts
 frontend/dist/
 frontend/node_modules/
+frontend/.vite/
+frontend/.vercel/

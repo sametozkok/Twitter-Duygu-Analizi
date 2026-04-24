@@ -59,7 +59,7 @@ def _classify(name: str, text: str) -> tuple[str, float]:
 def compare_replies(replies: list[dict], algorithms: list[str]) -> dict:
     normalized_algorithms = [item.strip().lower() for item in algorithms if item.strip()]
     if not normalized_algorithms:
-        normalized_algorithms = ["bert", "hybrid"]
+        normalized_algorithms = ["bert", "hybrid", "api"]
 
     algorithm_results: dict[str, dict] = {}
     if _BERT_ANALYZER is None:
@@ -72,16 +72,29 @@ def compare_replies(replies: list[dict], algorithms: list[str]) -> dict:
     else:
         bert_engine = "fallback-rule"
 
+    # API için tüm yorumları tek seferde değerlendir.
+    api_results_map = {}
+    if "api" in normalized_algorithms:
+        try:
+            from backend.analyzer.gemini_sentiment import bulk_analyze_sentiment_with_gemini
+            api_results_map = bulk_analyze_sentiment_with_gemini(replies)
+        except Exception:
+            pass
+
     for algorithm in normalized_algorithms:
         items = []
         counts = Counter()
 
-        for reply in replies:
+        for i, reply in enumerate(replies):
             clean_text = str(reply.get("clean_text") or reply.get("text") or "").strip()
             if len(clean_text) < 2:
                 continue
 
-            label, score = _classify(algorithm, clean_text)
+            if algorithm == "api":
+                label, score = api_results_map.get(i, ("neutral", 0.5))
+            else:
+                label, score = _classify(algorithm, clean_text)
+                
             counts[label] += 1
             items.append({
                 "user": reply.get("user", ""),
@@ -96,6 +109,8 @@ def compare_replies(replies: list[dict], algorithms: list[str]) -> dict:
             engine_name = bert_engine
         elif algorithm == "hybrid":
             engine_name = f"hybrid({bert_engine}+confidence-gate)"
+        elif algorithm == "api":
+            engine_name = "gemini-api"
         else:
             engine_name = "unknown"
 

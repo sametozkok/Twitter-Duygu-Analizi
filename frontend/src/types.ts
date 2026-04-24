@@ -74,6 +74,7 @@ export type SentimentSummary = {
 }
 
 export type SentimentAlgorithmResult = {
+  engine?: string
   summary: SentimentSummary
   items: Array<{
     user?: string
