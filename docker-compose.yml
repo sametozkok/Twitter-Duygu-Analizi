@@ -1,0 +1,46 @@
+services:
+  backend:
+    build: .
+    image: twitter-analiz-backend:latest
+    container_name: twitter-backend
+    restart: unless-stopped
+    ports:
+      # NOT: 8000 portu api-pipelineflow projesi tarafından kullanılıyor.
+      # Twitter backend için host'ta 8001 kullanıyoruz, container içinde 8000.
+      # NPM, http://192.168.1.13:8001 adresine proxy yapacak.
+      - "8001:8000"
+    env_file:
+      - .env
+    volumes:
+      # JSON çıktıları kalıcı olsun
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - twitter-net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Build-time: Vite import.meta.env içine bake edilir
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    image: twitter-analiz-frontend:latest
+    container_name: twitter-frontend
+    restart: unless-stopped
+    ports:
+      # NPM zaten http://192.168.1.13:3001 -> twitter.mericozkaya.me proxy yapıyor.
+      # Bu port'u koruyoruz, NPM ayarına dokunmaya gerek yok.
+      - "3001:80"
+    depends_on:
+      - backend
+    networks:
+      - twitter-net
+
+networks:
+  twitter-net:
+    driver: bridge

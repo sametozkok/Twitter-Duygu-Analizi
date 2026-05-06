@@ -1,0 +1,41 @@
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Frontend (ayrı imajda build edilir)
+frontend/
+
+# Veriler (volume ile mount edilir, image'a girmez)
+data/analysis_runs/
+
+# Git ve editor
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Env (env_file ile compose üzerinden okunur)
+.env
+.env.*
+!.env.example
+
+# Doc & test
+*.md
+docs/
+tests/
+
+# Deploy meta
+scripts/
+.dockerignore
+Dockerfile
+docker-compose*.yml

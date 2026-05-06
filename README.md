@@ -12,6 +12,7 @@ Yeni geliştirme hattı `frontend/` klasöründeki React uygulaması ve `backend
 - [Kurulum](#kurulum)
 - [Yapılandırma (.env)](#yapılandırma-env)
 - [Çalıştırma](#çalıştırma)
+- [Canlıya Alma (Self-hosted, Docker)](#canlıya-alma-self-hosted-docker)
 - [Canlıya Alma (Render + Vercel)](#canlıya-alma-render--vercel)
 - [Nasıl Çalışır?](#nasıl-çalışır)
 - [Test](#test)
@@ -107,6 +108,27 @@ npm run dev
 ```
 
 API varsayılan olarak `http://localhost:8000`, frontend ise `http://localhost:5173` üzerinde çalışır.
+
+## Canlıya Alma (Self-hosted, Docker)
+
+Sunucunuzda Nginx + Cloudflare zaten varsa, arkadaki backend ve frontend Docker ile yönetilebilir. Detaylı adım adım Türkçe rehber: **[`docs/deploy.md`](docs/deploy.md)**
+
+Hızlı özet:
+
+```bash
+ssh kullanici@sunucu
+cd ~/Twitter-Duygu-Analizi
+nano .env                  # API key'leri ve VITE_API_BASE_URL'i kontrol et
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh        # Tek komut: pull + build + up + healthcheck
+```
+
+İlgili dosyalar:
+- `Dockerfile` — backend (Python + FastAPI)
+- `frontend/Dockerfile` — frontend (Node build → Nginx serve)
+- `docker-compose.yml` — iki servisi orkestre eder
+- `scripts/deploy.sh` — sunucuda tek komutla deploy
+- `docs/deploy.md` — SSH adımları, sorun giderme, rollback
 
 ## Canlıya Alma (Render + Vercel)
 
