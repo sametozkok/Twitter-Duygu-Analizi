@@ -32,7 +32,12 @@ def run_match_pipeline(request: MatchRequest) -> MatchResponse:
     if not GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY tanimli degil. Sunucu ortam degiskenlerini kontrol edin.")
 
-    channels_data = fetch_multiple_channels(request.channels, request.tweets_per_channel)
+    resolved_bearer = (request.twitter_bearer_token or "").strip() or (TWITTER_BEARER_TOKEN or "").strip()
+    channels_data = fetch_multiple_channels(
+        request.channels,
+        request.tweets_per_channel,
+        bearer_token=resolved_bearer,
+    )
     valid_channels = [channel for channel in channels_data if not channel.get("error") and channel.get("tweets")]
 
     if not valid_channels:
@@ -229,6 +234,7 @@ def run_analysis_pipeline(request: AnalysisRequest) -> AnalysisResponse:
             channels=request.channels,
             tweets_per_channel=request.tweets_per_channel,
             min_channels_for_match=request.min_channels_for_match,
+            twitter_bearer_token=request.twitter_bearer_token,
         )
     )
 

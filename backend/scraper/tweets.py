@@ -81,21 +81,31 @@ def _get_public_tweet_metrics(tweet_id: str) -> dict:
         return {}
 
 
-def _get_guest_session() -> requests.Session:
-    """Guest token ile oturum oluştur (cache'li)."""
-    if not BEARER_TOKEN:
+def _get_guest_session(bearer_token: str | None = None) -> requests.Session:
+    """Guest token ile oturum oluştur (cache'li).
+
+    bearer_token verilirse o kullanılır; yoksa .env'den gelen BEARER_TOKEN.
+    Cache, kullanılan bearer'a göre invalidate olur.
+    """
+    token_to_use = (bearer_token or "").strip() or BEARER_TOKEN
+    if not token_to_use:
         raise RuntimeError(
-            "Twitter BEARER token yapılandırılmamış. Lütfen proje kökündeki .env dosyanıza "
-            "TWITTER_BEARER_TOKEN değişkenini ekleyin."
+            "Twitter BEARER token yapılandırılmamış. Lütfen formdaki Bearer Token "
+            "alanına geçerli bir token girin veya .env dosyasına TWITTER_BEARER_TOKEN ekleyin."
         )
+
     now = time.time()
-    # Token 15 dakika geçerliliğini korur
-    if _guest_session["session"] and (now - _guest_session["time"]) < 840:
+    # Aynı bearer için cache 15 dk geçerli
+    if (
+        _guest_session["session"]
+        and _guest_session.get("bearer") == token_to_use
+        and (now - _guest_session["time"]) < 840
+    ):
         return _guest_session["session"]
 
     session = requests.Session()
     session.headers.update({
-        "Authorization": f"Bearer {BEARER_TOKEN}",
+        "Authorization": f"Bearer {token_to_use}",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     })
 
@@ -105,6 +115,7 @@ def _get_guest_session() -> requests.Session:
     session.headers["x-guest-token"] = guest_token
 
     _guest_session["session"] = session
+    _guest_session["bearer"] = token_to_use
     _guest_session["token"] = guest_token
     _guest_session["time"] = now
     return session
@@ -136,12 +147,13 @@ def extract_username(url_or_username: str) -> str:
     return username
 
 
-def fetch_user_tweets(username_or_url: str, count: int = 10) -> dict:
+def fetch_user_tweets(username_or_url: str, count: int = 10, bearer_token: str | None = None) -> dict:
     """Bir Twitter kullanıcısının son tweetlerini GraphQL API ile çeker.
 
     Args:
         username_or_url: Kullanıcı adı, @mention veya profil URL'si
         count: Çekilecek tweet sayısı
+        bearer_token: İsteğe bağlı; verilirse .env yerine bu kullanılır
 
     Returns:
         dict: username, tweets listesi, error
@@ -150,7 +162,7 @@ def fetch_user_tweets(username_or_url: str, count: int = 10) -> dict:
     result = {"username": username, "tweets": [], "error": None}
 
     try:
-        session = _get_guest_session()
+        session = _get_guest_session(bearer_token)
 
         # 1) Kullanıcı ID'sini al
         user_id = _get_user_id(session, username)
@@ -250,12 +262,13 @@ def fetch_user_tweets(username_or_url: str, count: int = 10) -> dict:
     return result
 
 
-def fetch_multiple_channels(urls: list[str], count: int = 10) -> list[dict]:
+def fetch_multiple_channels(urls: list[str], count: int = 10, bearer_token: str | None = None) -> list[dict]:
     """Birden fazla kanalın tweetlerini çeker.
 
     Args:
         urls: Kanal URL'leri veya kullanıcı adları listesi
         count: Her kanal için çekilecek tweet sayısı
+        bearer_token: İsteğe bağlı; verilirse .env yerine bu kullanılır
 
     Returns:
         list[dict]: Her kanal için fetch_user_tweets sonucu
@@ -264,6 +277,6 @@ def fetch_multiple_channels(urls: list[str], count: int = 10) -> list[dict]:
     for i, url in enumerate(urls):
         if i > 0:
             time.sleep(1)  # rate limit'e takılmamak için
-        result = fetch_user_tweets(url, count)
+        result = fetch_user_tweets(url, count, bearer_token=bearer_token)
         results.append(result)
     return results

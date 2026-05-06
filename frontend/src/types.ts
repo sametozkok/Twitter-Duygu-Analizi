@@ -2,6 +2,7 @@ export type MatchRequest = {
   channels: string[]
   tweets_per_channel: number
   min_channels_for_match: number
+  twitter_bearer_token?: string
 }
 
 export type TweetItem = {

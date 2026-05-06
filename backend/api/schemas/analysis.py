@@ -15,6 +15,7 @@ class MatchRequest(BaseModel):
     channels: list[str] = Field(min_length=2)
     tweets_per_channel: int = 10
     min_channels_for_match: int = 2
+    twitter_bearer_token: str = ""
 
 
 class AnalysisGroup(BaseModel):
