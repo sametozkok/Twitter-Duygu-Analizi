@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { SegmentedControl } from '../../components/SegmentedControl'
@@ -109,7 +109,25 @@ export function SentimentDashboard(props: {
   const selectedAlgo = useMemo(() => algorithmOrder.find((a) => a.key === selectedAlgorithmKey) ?? algorithmOrder[0], [algorithmOrder, selectedAlgorithmKey])
   const totals = selectedAlgo ? algorithmTotals[selectedAlgo.key] : null
   const words = selectedAlgo ? (wordCloudByAlgorithm?.[selectedAlgo.key] ?? []) : []
-  const engineLabel = selectedAlgo && totals ? totals.engine ?? selectedAlgo.fallbackEngine : ''
+  const isApiFallback = useMemo(() => {
+    const apiTotals = algorithmTotals['api']
+    const engine = String(apiTotals?.engine ?? '')
+    if (!engine) return false
+    return engine.toLowerCase().includes('bert') || engine.toLowerCase().includes('yerel') || engine.toLowerCase().includes('başarısız')
+  }, [algorithmTotals])
+
+  const engineLabel = useMemo(() => {
+    if (!selectedAlgo || !totals) return ''
+    if (selectedAlgo.key === 'api' && isApiFallback) return ''
+    return totals.engine ?? selectedAlgo.fallbackEngine
+  }, [isApiFallback, selectedAlgo, totals])
+
+  // If API is unavailable, force selection back to BERT.
+  useEffect(() => {
+    if (isApiFallback && selectedAlgorithmKey === 'api') {
+      setSelectedAlgorithmKey('bert')
+    }
+  }, [isApiFallback, selectedAlgorithmKey, setSelectedAlgorithmKey])
 
   return (
     <>
@@ -121,6 +139,7 @@ export function SentimentDashboard(props: {
           options={algorithmOrder.map((algo) => ({
             value: algo.key,
             label: t(`analysis:algorithm.${algo.key}` as any, { defaultValue: algo.title }),
+            disabled: algo.key === 'api' ? isApiFallback : false,
           }))}
         />
       </div>
@@ -132,7 +151,7 @@ export function SentimentDashboard(props: {
               <span className="icon">psychology</span>
               <h4>{selectedAlgo ? t(`analysis:algorithm.${selectedAlgo.key}` as any, { defaultValue: selectedAlgo.title }) : '-'}</h4>
             </div>
-            <span className="sentiment-engine">{engineLabel}</span>
+            {engineLabel ? <span className="sentiment-engine">{engineLabel}</span> : null}
           </div>
 
           {!totals || totals.total === 0 ? (

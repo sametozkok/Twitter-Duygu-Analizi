@@ -12,6 +12,7 @@ import { SentimentDashboard } from './features/analysis/SentimentDashboard'
 import i18n, { getIntlLocaleTag } from './i18n'
 import type { SupportedLocale } from './i18n'
 import { useTheme } from './theme/ThemeProvider'
+import { AvatarGroup } from './components/ui/avatar-group'
 import type {
   MatchResponse,
   RepliesResponse,
@@ -43,10 +44,9 @@ function formatDateLabel(value?: string) {
   if (!value) return '-'
   const parsed = Date.parse(value)
   if (Number.isNaN(parsed)) return value
-  // API returns UTC, add 3 hours for Turkey (UTC+3)
-  const corrected = new Date(parsed + 3 * 60 * 60 * 1000)
   const locale = getIntlLocaleTag((i18n.language as any) || 'tr')
-  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(corrected)
+  // Date already resolves UTC strings into local time; avoid double-shifting.
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(parsed))
 }
 
 function formatRunTimestamp(value?: string) {
@@ -74,6 +74,36 @@ function extractChannelName(url: string): string {
   const atMatch = trimmed.match(/^@?([\w]+)$/)
   if (atMatch) return atMatch[1]
   return trimmed
+}
+
+function buildLetterAvatarDataUrl(letter: string, seed: string) {
+  const safeLetter = (letter || '?').slice(0, 1).toUpperCase()
+  const colors = [
+    ['#1d9bf0', '#1a73c7'],
+    ['#00ba7c', '#028a5d'],
+    ['#ffad5c', '#f97316'],
+    ['#d291ff', '#7c3aed'],
+    ['#79e2f2', '#06b6d4'],
+    ['#ff6b9d', '#db2777'],
+  ]
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  const [c1, c2] = colors[hash % colors.length]
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${c1}"/>
+      <stop offset="1" stop-color="${c2}"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="50" fill="url(#g)"/>
+  <text x="50" y="56" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif"
+        font-size="44" font-weight="900" fill="#ffffff">${safeLetter}</text>
+</svg>`
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 }
 
 /* ========== SVG Icons ========== */
@@ -405,8 +435,6 @@ export default function App() {
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const [archiveOpeningId, setArchiveOpeningId] = useState<string | null>(null)
   const [archiveDeletingId, setArchiveDeletingId] = useState<string | null>(null)
-  const [lastRunAtIso, setLastRunAtIso] = useState<string | null>(null)
-  const [currentRunChannels, setCurrentRunChannels] = useState<string[] | null>(null)
   const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
     try {
       return window.localStorage.getItem('onboardingDismissed') === 'true'
@@ -604,8 +632,6 @@ export default function App() {
       const response = await runMatch({ channels: activeChannels, tweets_per_channel: Number(tweetsPerChannel) || 10, min_channels_for_match: Number(minChannelsForMatch) || 2 })
       setMatchResult(response)
       setCurrentRunId(response.run_id ?? null)
-      setLastRunAtIso(new Date().toISOString())
-      setCurrentRunChannels(activeChannels)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('dashboard:errors.matchUnexpected'))
     } finally {
@@ -632,7 +658,6 @@ export default function App() {
       })
       setRepliesResult(response)
       setCompareResult(null)
-      setLastRunAtIso((prev) => prev ?? new Date().toISOString())
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t('dashboard:errors.repliesUnexpected'))
     } finally {
@@ -735,8 +760,6 @@ export default function App() {
         setCompareResult(null)
       }
       setCurrentRunId(detail.run_id)
-      setLastRunAtIso(detail.updated_at || detail.created_at || new Date().toISOString())
-      setCurrentRunChannels(detail.channels ?? [])
       setSelectedGroupIndex(0)
       setExpandedReplies({})
       setError(null)
@@ -760,7 +783,6 @@ export default function App() {
         setRepliesResult(null)
         setCompareResult(null)
         setCurrentRunId(null)
-        setCurrentRunChannels(null)
       }
     } catch (e) {
       setArchiveError(e instanceof Error ? e.message : t('dashboard:errors.archiveRunDeleteFailed'))
@@ -816,17 +838,6 @@ export default function App() {
   }, [selectedGroup?.topic])
 
   /* ========== RENDER ========== */
-
-  const lastRunLabel = useMemo(() => {
-    if (!currentRunId || !lastRunAtIso) return t('dashboard:status.none')
-    const dt = new Date(lastRunAtIso)
-    const locale = getIntlLocaleTag((i18n.language as any) || 'tr')
-    const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(dt)
-    const channelCount = currentRunChannels?.length ?? activeChannels.length
-    const groupCount = matchResult?.matched_groups?.length ?? 0
-    const replyCount = repliesResult?.total_replies ?? 0
-    return `${t('dashboard:status.lastRun')}: ${time} • ${t('dashboard:status.channels', { count: channelCount })} • ${t('dashboard:status.groups', { count: groupCount })} • ${t('dashboard:status.replies', { count: replyCount })}`
-  }, [activeChannels.length, currentRunChannels?.length, currentRunId, lastRunAtIso, matchResult?.matched_groups?.length, repliesResult?.total_replies, t])
 
   return (
     <div
@@ -1354,10 +1365,6 @@ export default function App() {
             {shownGroups.length > 0 && <span className="feed-header-count">({shownGroups.length})</span>}
           </h2>
           <div className="feed-header-tools">
-            <div className="run-status-chip" title={lastRunLabel} aria-label={lastRunLabel}>
-              <span className="icon">schedule</span>
-              <span>{lastRunLabel}</span>
-            </div>
             <div className="feed-search">
               <span className="icon">search</span>
               <input
@@ -1446,14 +1453,6 @@ export default function App() {
                     </div>
 
                     <div className="group-meta">
-                      <div className="group-source-badges">
-                        {group.channels.map((ch) => (
-                          <span className="source-badge" key={ch}>
-                            <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
-                            @{ch}
-                          </span>
-                        ))}
-                      </div>
                       <div className="group-stats">
                         <span className="group-stat">
                           <span className="icon">forum</span>
@@ -1500,34 +1499,25 @@ export default function App() {
 
                       return (
                         <div className="tweet-focus" id="tweet-focus">
-                          <div className="tweet-tabs" role="tablist" aria-label="Channels">
-                            {group.tweets.map((tw, idx) => {
-                              const ch = tw.channel ? `@${tw.channel}` : `#${idx + 1}`
-                              const active = idx === safeIndex
-                              return (
-                                <button
-                                  key={`${group.topic}-tab-${idx}-${ch}`}
-                                  type="button"
-                                  className={`tweet-tab${active ? ' active' : ''}`}
-                                  role="tab"
-                                  aria-selected={active}
-                                  onClick={() => setSelectedTweetIndex(idx)}
-                                >
-                                  <ChannelAvatar channel={ch} className="tweet-tab-avatar" size={24} />
-                                  <span className="tweet-tab-label">{ch}</span>
-                                </button>
-                              )
-                            })}
-                          </div>
-
                           <article className="split-tweet">
                             <div className="tweet-author">
-                              <div className="tweet-author-avatar">
-                                {(tweet.channel || '?').replace('@', '').slice(0, 1).toUpperCase()}
+                              <div className="tweet-channel-switch">
+                                <AvatarGroup
+                                  avatars={group.tweets.map((tw, idx) => {
+                                    const ch = tw.channel ? `@${tw.channel}` : `#${idx + 1}`
+                                    const letter = ch.replace('@', '').slice(0, 1).toUpperCase()
+                                    const src = buildLetterAvatarDataUrl(letter, ch)
+                                    return { src, label: ch }
+                                  })}
+                                  maxVisible={4}
+                                  size={30}
+                                  overlap={12}
+                                  value={safeIndex}
+                                  onChange={(idx) => setSelectedTweetIndex(idx)}
+                                />
                               </div>
                               <div className="tweet-author-info">
                                 <span className="tweet-author-name">{tweet.channel ? `@${tweet.channel}` : renderTweetLabel(tweet, safeIndex)}</span>
-                                <span className="tweet-author-handle">{tweet.channel ? `@${tweet.channel}` : ''}</span>
                               </div>
                               <span className="tweet-author-time">{tweet.date_formatted || '-'}</span>
                             </div>

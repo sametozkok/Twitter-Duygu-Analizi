@@ -3,6 +3,7 @@ import React from 'react'
 export type SegmentedOption<T extends string> = {
   value: T
   label: string
+  disabled?: boolean
 }
 
 type SegmentedControlProps<T extends string> = {
@@ -21,10 +22,13 @@ export function SegmentedControl<T extends string>({ value, onChange, options, a
           <button
             key={opt.value}
             type="button"
-            className={`segmented-btn${checked ? ' is-active' : ''}`}
+            className={`segmented-btn${checked ? ' is-active' : ''}${opt.disabled ? ' is-disabled' : ''}`}
             role="radio"
             aria-checked={checked}
-            onClick={() => onChange(opt.value)}
+            onClick={() => {
+              if (!opt.disabled) onChange(opt.value)
+            }}
+            disabled={opt.disabled}
           >
             {opt.label}
           </button>
