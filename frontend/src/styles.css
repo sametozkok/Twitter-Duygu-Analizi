@@ -99,13 +99,51 @@ a { text-decoration: none; color: var(--text-link); }
   -webkit-font-feature-settings: 'liga';
   font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+  position: relative;
+  width: 1em;
+  height: 1em;
+  display: inline-grid;
+  place-items: center;
 }
 
-.ui-icon {
-  width: 22px;
-  height: 22px;
-  display: inline-block;
-  flex-shrink: 0;
+.icon-lg {
+  font-size: 48px;
+  opacity: 0.5;
+  color: var(--text-tertiary);
+}
+
+/* Hide ligature text until the icon font is ready */
+html:not(.icons-ready) .icon {
+  color: transparent;
+}
+
+html:not(.icons-ready) .icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border: 1px solid var(--border-subtle);
+}
+
+html.icons-ready .icon::after {
+  display: none;
+}
+
+/* If font never loads, stop shimmer but keep text hidden */
+html.icons-fallback .icon {
+  color: transparent;
+}
+
+html.icons-fallback .icon::after {
+  display: none;
 }
 
 /* ===================================================================
@@ -675,12 +713,6 @@ body.is-resizing {
   text-align: center;
 }
 
-.feed-empty .icon {
-  font-size: 48px;
-  color: var(--text-tertiary);
-  opacity: 0.5;
-}
-
 .feed-empty h3 {
   font-size: 16px;
   font-weight: 700;
@@ -1134,10 +1166,31 @@ body.is-resizing {
   color: var(--text-secondary);
 }
 
-.analysis-empty .icon {
-  font-size: 48px;
-  opacity: 0.4;
-  color: var(--text-tertiary);
+.empty-skeleton {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.empty-skeleton-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+}
+
+.empty-skeleton-line {
+  width: 220px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+}
+
+.empty-skeleton-line.short {
+  width: 160px;
 }
 
 /* --- Summary Section --- */
