@@ -35,6 +35,8 @@ def analyze(request: AnalysisRequest) -> AnalysisResponse:
 def match(request: MatchRequest) -> MatchResponse:
     try:
         return run_match_pipeline(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

@@ -1765,6 +1765,27 @@ body.is-resizing {
   animation: shimmer 1.5s infinite;
 }
 
+.skeleton {
+  display: block;
+  width: 100%;
+  min-height: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 68, 77, 0.35);
+}
+
+.skeleton-text {
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton-line {
+  width: 100%;
+}
+
+.skeleton-line-short {
+  width: 68%;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }

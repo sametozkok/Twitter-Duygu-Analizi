@@ -55,8 +55,13 @@ export async function runMatch(payload: MatchRequest): Promise<MatchResponse> {
   })
 
   if (!response.ok) {
-    const body = await response.text()
-    throw new Error(body || `Match request failed with status ${response.status}`)
+    const text = await response.text()
+    try {
+      const parsed = JSON.parse(text) as { detail?: string }
+      throw new Error(parsed.detail || text || `Match request failed with status ${response.status}`)
+    } catch {
+      throw new Error(text || `Match request failed with status ${response.status}`)
+    }
   }
 
   return response.json() as Promise<MatchResponse>

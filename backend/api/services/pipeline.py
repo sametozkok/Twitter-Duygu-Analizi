@@ -35,6 +35,22 @@ def run_match_pipeline(request: MatchRequest) -> MatchResponse:
     channels_data = fetch_multiple_channels(request.channels, request.tweets_per_channel)
     valid_channels = [channel for channel in channels_data if not channel.get("error") and channel.get("tweets")]
 
+    if not valid_channels:
+        error_lines: list[str] = []
+        for item in channels_data:
+            username = item.get("username") or "-"
+            err = item.get("error")
+            tweet_count = len(item.get("tweets") or [])
+            if err:
+                error_lines.append(f"- @{username}: {err}")
+            else:
+                error_lines.append(f"- @{username}: tweet bulunamadı (0/{tweet_count})")
+
+        raise ValueError(
+            "Kanal tweetleri çekilemedi. Genelde `TWITTER_BEARER_TOKEN` eksik/yanlış ya da X tarafı isteği engellediği için olur.\n"
+            + "\n".join(error_lines)
+        )
+
     matched_groups = match_news(valid_channels, GEMINI_API_KEY, request.min_channels_for_match)
 
     group_results: list[AnalysisGroup] = []

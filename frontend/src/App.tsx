@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { deleteRun, getRun, listRuns, runMatch, runReplies, runSentimentCompare } from './lib/api'
+import { Skeleton, SkeletonText } from './components/Skeleton'
 import type {
   MatchResponse,
   RepliesResponse,
@@ -207,6 +208,186 @@ function WordCloud({ words }: { words: { text: string; weight: number }[] }) {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+function ArchiveListSkeleton() {
+  return (
+    <div className="feed-content" aria-label="Arşiv yükleniyor">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <article className="archive-card" key={`archive-skel-${i}`}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'grid', gap: 10, minWidth: 220, flex: 1 }}>
+              <Skeleton height={14} radius={999} style={{ width: '44%' }} />
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Skeleton height={22} radius={999} style={{ width: 92 }} />
+                <Skeleton height={22} radius={999} style={{ width: 84 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Skeleton height={22} radius={999} style={{ width: 96 }} />
+              <Skeleton height={22} radius={999} style={{ width: 84 }} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Skeleton height={26} radius={999} style={{ width: 120 }} />
+            <Skeleton height={26} radius={999} style={{ width: 110 }} />
+            <Skeleton height={26} radius={999} style={{ width: 130 }} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Skeleton height={14} radius={999} style={{ width: 110 }} />
+              <Skeleton height={14} radius={999} style={{ width: 110 }} />
+              <Skeleton height={14} radius={999} style={{ width: 180 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Skeleton height={36} radius={12} style={{ width: 120 }} />
+              <Skeleton height={36} radius={12} style={{ width: 44 }} />
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="feed-content" aria-label="Raporlar yükleniyor">
+      <div className="analytics-overview">
+        <div className="summary-stat-row" style={{ marginBottom: '20px' }}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div className="summary-stat-card" key={`summary-skel-${i}`}>
+              <Skeleton height={22} radius={12} style={{ width: 64 }} />
+              <Skeleton height={12} radius={999} style={{ width: 120, marginTop: 10 }} />
+            </div>
+          ))}
+        </div>
+        <Skeleton height={16} radius={999} style={{ width: 140, marginBottom: 12 }} />
+        <div className="archive-card-channels" style={{ marginBottom: '20px' }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={`ch-skel-${i}`} height={26} radius={999} style={{ width: 120 }} />
+          ))}
+        </div>
+        <Skeleton height={16} radius={999} style={{ width: 160, marginBottom: 12 }} />
+        <div className="analytics-table">
+          <div className="analytics-table-header">
+            <div>Tarih</div>
+            <div>Kanallar</div>
+            <div>Grup</div>
+            <div>Yorum</div>
+            <div>Durum</div>
+          </div>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={`row-skel-${i}`} className="analytics-table-row" style={{ cursor: 'default' }}>
+              <Skeleton height={12} radius={999} style={{ width: 120 }} />
+              <Skeleton height={12} radius={999} />
+              <Skeleton height={12} radius={999} style={{ width: 44 }} />
+              <Skeleton height={12} radius={999} style={{ width: 52 }} />
+              <Skeleton height={22} radius={999} style={{ width: 120, justifySelf: 'end' }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AlertsSkeleton() {
+  return (
+    <div className="feed-content" aria-label="Bildirimler yükleniyor">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={`alert-skel-${i}`}
+          className="alert-card"
+          style={{
+            padding: '15px',
+            background: 'var(--bg-secondary)',
+            borderRadius: '8px',
+            marginBottom: '10px',
+            borderLeft: '4px solid var(--accent)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <Skeleton height={16} radius={999} style={{ width: 180 }} />
+          </div>
+          <SkeletonText lines={2} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DashboardGroupsSkeleton() {
+  return (
+    <div className="feed-content" aria-label="Haberler yükleniyor">
+      {Array.from({ length: 7 }).map((_, i) => (
+        <article className="news-group-card" key={`group-skel-${i}`}>
+          <div className="group-card-header">
+            <Skeleton height={18} radius={999} style={{ width: 26 }} />
+            <Skeleton height={16} radius={999} style={{ width: '72%' }} />
+          </div>
+          <div className="group-meta" style={{ marginTop: 12 }}>
+            <div className="group-source-badges">
+              <Skeleton height={26} radius={999} style={{ width: 110 }} />
+              <Skeleton height={26} radius={999} style={{ width: 120 }} />
+              <Skeleton height={26} radius={999} style={{ width: 98 }} />
+            </div>
+            <div className="group-stats">
+              <Skeleton height={14} radius={999} style={{ width: 96 }} />
+              <Skeleton height={14} radius={999} style={{ width: 84 }} />
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function RightPanelSkeleton({ title }: { title: string }) {
+  return (
+    <div style={{ padding: '0 16px 16px' }} aria-label={`${title} yükleniyor`}>
+      <section className="analysis-summary">
+        <Skeleton height={18} radius={999} style={{ width: '80%', marginBottom: 12 }} />
+        <div className="summary-channels" style={{ marginBottom: 14 }}>
+          <Skeleton height={26} radius={999} style={{ width: 110 }} />
+          <Skeleton height={26} radius={999} style={{ width: 120 }} />
+          <Skeleton height={26} radius={999} style={{ width: 98 }} />
+        </div>
+        <div className="summary-stat-row">
+          <div className="summary-stat-card">
+            <Skeleton height={24} radius={12} style={{ width: 52 }} />
+            <Skeleton height={12} radius={999} style={{ width: 90, marginTop: 10 }} />
+          </div>
+          <div className="summary-stat-card">
+            <Skeleton height={24} radius={12} style={{ width: 52 }} />
+            <Skeleton height={12} radius={999} style={{ width: 90, marginTop: 10 }} />
+          </div>
+        </div>
+      </section>
+
+      <section className="sentiment-dashboard" style={{ marginTop: 14 }}>
+        <div className="sentiment-header">
+          <Skeleton height={14} radius={999} style={{ width: 180 }} />
+        </div>
+        <div className="sentiment-grid" style={{ marginTop: 12 }}>
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div className="sentiment-panel" key={`sentiment-panel-skel-${i}`}>
+              <div className="sentiment-panel-header" style={{ marginBottom: 12 }}>
+                <Skeleton height={14} radius={999} style={{ width: 120 }} />
+                <Skeleton height={12} radius={999} style={{ width: 110 }} />
+              </div>
+              <Skeleton height={180} radius={16} />
+              <div style={{ marginTop: 12 }}>
+                <SkeletonText lines={4} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
@@ -854,121 +1035,125 @@ export default function App() {
               </div>
             </div>
 
-            <div className="feed-content">
-              {archiveError && (
-                <div className="error-banner" role="alert">
-                  <span className="icon">error</span>
-                  <span>{archiveError}</span>
-                </div>
-              )}
+            {archiveLoading && archiveRuns.length === 0 ? (
+              <ArchiveListSkeleton />
+            ) : (
+              <div className="feed-content">
+                {archiveError && (
+                  <div className="error-banner" role="alert">
+                    <span className="icon">error</span>
+                    <span>{archiveError}</span>
+                  </div>
+                )}
 
-              {!archiveLoading && archiveRuns.length === 0 && !archiveError ? (
-                <div className="feed-empty">
-                  <span className="icon">inventory_2</span>
-                  <h3>Arşiv boş</h3>
-                  <p>Henüz kayıtlı analiz yok. Dashboard'dan tweet çekince otomatik olarak buraya kaydedilir.</p>
-                </div>
-              ) : (
-                archiveRuns
-                  .filter((r) => {
-                    const q = searchQuery.trim().toLowerCase()
-                    if (!q) return true
+                {!archiveLoading && archiveRuns.length === 0 && !archiveError ? (
+                  <div className="feed-empty">
+                    <span className="icon">inventory_2</span>
+                    <h3>Arşiv boş</h3>
+                    <p>Henüz kayıtlı analiz yok. Dashboard'dan tweet çekince otomatik olarak buraya kaydedilir.</p>
+                  </div>
+                ) : (
+                  archiveRuns
+                    .filter((r) => {
+                      const q = searchQuery.trim().toLowerCase()
+                      if (!q) return true
+                      return (
+                        r.run_id.toLowerCase().includes(q) ||
+                        r.channels.some((c) => c.toLowerCase().includes(q))
+                      )
+                    })
+                    .map((run) => {
+                    const isOpening = archiveOpeningId === run.run_id
+                    const isDeleting = archiveDeletingId === run.run_id
                     return (
-                      r.run_id.toLowerCase().includes(q) ||
-                      r.channels.some((c) => c.toLowerCase().includes(q))
+                      <article className="archive-card" key={run.run_id} id={`archive-card-${run.run_id}`}>
+                        <div className="archive-card-header">
+                          <div className="archive-card-title">
+                            <span className="icon">schedule</span>
+                            <span>{formatRunTimestamp(run.created_at)}</span>
+                          </div>
+                          <div className="archive-card-flags">
+                            {run.has_replies ? (
+                              <span className="archive-flag flag-on">
+                                <span className="icon">forum</span>
+                                Yorumlar
+                              </span>
+                            ) : (
+                              <span className="archive-flag flag-off">
+                                <span className="icon">forum</span>
+                                Yorum yok
+                              </span>
+                            )}
+                            {run.has_sentiment ? (
+                              <span className="archive-flag flag-on">
+                                <span className="icon">insights</span>
+                                Duygu analizli
+                              </span>
+                            ) : (
+                              <span className="archive-flag flag-off">
+                                <span className="icon">insights</span>
+                                Analiz yapılmamış
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="archive-card-channels">
+                          {run.channels.map((ch) => (
+                            <span className="source-badge" key={`${run.run_id}-${ch}`}>
+                              <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                              @{ch}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="archive-card-stats">
+                          <span className="group-stat">
+                            <span className="icon">group_work</span>
+                            {run.total_groups} grup
+                          </span>
+                          <span className="group-stat">
+                            <span className="icon">forum</span>
+                            {run.total_replies} yorum
+                          </span>
+                          <span className="archive-card-id">ID: {run.run_id}</span>
+                        </div>
+
+                        <div className="archive-card-actions">
+                          <button
+                            className="fetch-btn"
+                            type="button"
+                            onClick={() => openArchiveRun(run.run_id)}
+                            disabled={isOpening}
+                          >
+                            {isOpening ? (
+                              <>
+                                <span className="spinner" />
+                                Açılıyor...
+                              </>
+                            ) : (
+                              <>
+                                <span className="icon">open_in_new</span>
+                                Aç
+                              </>
+                            )}
+                          </button>
+                          <button
+                            className="archive-delete-btn"
+                            type="button"
+                            onClick={() => removeArchiveRun(run.run_id)}
+                            disabled={isDeleting}
+                            title="Bu kaydı sil"
+                          >
+                            {isDeleting ? <span className="spinner" /> : <span className="icon">delete</span>}
+                          </button>
+                        </div>
+                      </article>
                     )
                   })
-                  .map((run) => {
-                  const isOpening = archiveOpeningId === run.run_id
-                  const isDeleting = archiveDeletingId === run.run_id
-                  return (
-                    <article className="archive-card" key={run.run_id} id={`archive-card-${run.run_id}`}>
-                      <div className="archive-card-header">
-                        <div className="archive-card-title">
-                          <span className="icon">schedule</span>
-                          <span>{formatRunTimestamp(run.created_at)}</span>
-                        </div>
-                        <div className="archive-card-flags">
-                          {run.has_replies ? (
-                            <span className="archive-flag flag-on">
-                              <span className="icon">forum</span>
-                              Yorumlar
-                            </span>
-                          ) : (
-                            <span className="archive-flag flag-off">
-                              <span className="icon">forum</span>
-                              Yorum yok
-                            </span>
-                          )}
-                          {run.has_sentiment ? (
-                            <span className="archive-flag flag-on">
-                              <span className="icon">insights</span>
-                              Duygu analizli
-                            </span>
-                          ) : (
-                            <span className="archive-flag flag-off">
-                              <span className="icon">insights</span>
-                              Analiz yapılmamış
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="archive-card-channels">
-                        {run.channels.map((ch) => (
-                          <span className="source-badge" key={`${run.run_id}-${ch}`}>
-                            <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
-                            @{ch}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="archive-card-stats">
-                        <span className="group-stat">
-                          <span className="icon">group_work</span>
-                          {run.total_groups} grup
-                        </span>
-                        <span className="group-stat">
-                          <span className="icon">forum</span>
-                          {run.total_replies} yorum
-                        </span>
-                        <span className="archive-card-id">ID: {run.run_id}</span>
-                      </div>
-
-                      <div className="archive-card-actions">
-                        <button
-                          className="fetch-btn"
-                          type="button"
-                          onClick={() => openArchiveRun(run.run_id)}
-                          disabled={isOpening}
-                        >
-                          {isOpening ? (
-                            <>
-                              <span className="spinner" />
-                              Açılıyor...
-                            </>
-                          ) : (
-                            <>
-                              <span className="icon">open_in_new</span>
-                              Aç
-                            </>
-                          )}
-                        </button>
-                        <button
-                          className="archive-delete-btn"
-                          type="button"
-                          onClick={() => removeArchiveRun(run.run_id)}
-                          disabled={isDeleting}
-                          title="Bu kaydı sil"
-                        >
-                          {isDeleting ? <span className="spinner" /> : <span className="icon">delete</span>}
-                        </button>
-                      </div>
-                    </article>
-                  )
-                })
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </>
         ) : currentView === 'analytics' ? (
           <>
@@ -993,9 +1178,7 @@ export default function App() {
             </div>
             <div className="feed-content">
               {archiveLoading && archiveRuns.length === 0 ? (
-                <div className="feed-empty">
-                   <span className="spinner" /> Yükleniyor...
-                </div>
+                <AnalyticsSkeleton />
               ) : (
                 <div className="analytics-overview">
                   <div className="summary-stat-row" style={{ marginBottom: '20px' }}>
@@ -1084,7 +1267,9 @@ export default function App() {
               </div>
             </div>
             <div className="feed-content">
-               {archiveRuns.length === 0 ? (
+               {archiveLoading && archiveRuns.length === 0 ? (
+                 <AlertsSkeleton />
+               ) : archiveRuns.length === 0 ? (
                  <div className="feed-empty">Bildirim yok.</div>
                ) : (
                  archiveRuns
@@ -1150,6 +1335,9 @@ export default function App() {
           </div>
         </div>
 
+        {isMatching ? (
+          <DashboardGroupsSkeleton />
+        ) : (
         <div className="feed-content">
           {error && (
             <div className="error-banner" role="alert" id="error-banner">
@@ -1313,6 +1501,7 @@ export default function App() {
             })
           )}
         </div>
+        )}
           </>
         )}
       </main>
@@ -1343,8 +1532,9 @@ export default function App() {
           </button>
         </div>
 
-        {!selectedGroup ? (
-          /* No group selected */
+        {(isFetchingReplies || isComparingSentiment) && selectedGroup ? (
+          <RightPanelSkeleton title={isFetchingReplies ? 'Yorumlar' : 'Duygu karşılaştırma'} />
+        ) : !selectedGroup ? (
           <div className="analysis-empty" id="analysis-empty">
             <span className="icon">analytics</span>
             <h3>Grup Seçin</h3>
