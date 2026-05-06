@@ -185,7 +185,10 @@ export default function App() {
   const [editingChannelIndex, setEditingChannelIndex] = useState<number | null>(null)
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
 
-  const [currentView, setCurrentView] = useState<'dashboard' | 'archive' | 'analytics' | 'search' | 'alerts'>('dashboard')
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(false)
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true)
+
+  const [currentView, setCurrentView] = useState<'dashboard' | 'archive' | 'analytics' | 'alerts'>('dashboard')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentRunId, setCurrentRunId] = useState<string | null>(null)
   const [archiveRuns, setArchiveRuns] = useState<RunSummary[]>([])
@@ -199,7 +202,21 @@ export default function App() {
     [channels],
   )
 
-  const shownGroups = repliesResult?.matched_groups ?? matchResult?.matched_groups ?? []
+  const rawGroups = repliesResult?.matched_groups ?? matchResult?.matched_groups ?? []
+  const shownGroups = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return rawGroups
+    return rawGroups.filter((g) => {
+      const inTopic = g.topic?.toLowerCase().includes(q)
+      const inChannels = (g.channels ?? []).some((c: string) => c.toLowerCase().includes(q))
+      const inTweets = (g.tweets ?? []).some((t: { text?: string; channel?: string }) => {
+        const textHit = (t.text ?? '').toLowerCase().includes(q)
+        const chHit = (t.channel ?? '').toLowerCase().includes(q)
+        return textHit || chHit
+      })
+      return Boolean(inTopic || inChannels || inTweets)
+    })
+  }, [rawGroups, searchQuery])
   const isRepliesReady = Boolean(repliesResult)
   const selectedGroupIndexSafe = selectedGroupIndex < shownGroups.length ? selectedGroupIndex : 0
   const selectedGroup = shownGroups[selectedGroupIndexSafe] ?? null
@@ -269,6 +286,20 @@ export default function App() {
   }, [algorithmItems])
 
   /* --- Handlers --- */
+  function closeLeftPanel() {
+    setIsLeftPanelOpen(false)
+    setEditingChannelIndex(null)
+  }
+
+  function toggleLeftPanel() {
+    setIsLeftPanelOpen((prev) => !prev)
+    setEditingChannelIndex(null)
+  }
+
+  function toggleRightPanel() {
+    setIsRightPanelOpen((prev) => !prev)
+  }
+
   function updateChannel(index: number, value: string) {
     setChannels((prev) => prev.map((item, i) => (i === index ? value : item)))
   }
@@ -295,6 +326,7 @@ export default function App() {
 
   async function handleFetchMatches() {
     setError(null)
+    closeLeftPanel()
     if (activeChannels.length < 2) {
       setError('En az 2 kanal girmen gerekiyor.')
       return
@@ -316,6 +348,7 @@ export default function App() {
 
   async function handleFetchReplies() {
     setError(null)
+    closeLeftPanel()
     if (!matchResult?.matched_groups?.length) {
       setError('Önce tweetleri çekip eşleşmeleri bulman gerekiyor.')
       return
@@ -341,6 +374,7 @@ export default function App() {
 
   async function handleCompareSentiment() {
     setError(null)
+    closeLeftPanel()
     if (!repliesResult?.matched_groups?.length) {
       setError('Duygu karşılaştırması için önce yorumları çekmelisin.')
       return
@@ -376,32 +410,31 @@ export default function App() {
 
   function showDashboardView() {
     setCurrentView('dashboard')
+    closeLeftPanel()
   }
 
   async function showArchiveView() {
     setCurrentView('archive')
+    closeLeftPanel()
     await refreshArchiveList()
   }
 
   async function showAnalyticsView() {
     setCurrentView('analytics')
-    await refreshArchiveList()
-  }
-
-  async function showSearchView() {
-    setCurrentView('search')
-    setSearchQuery('')
+    closeLeftPanel()
     await refreshArchiveList()
   }
 
   async function showAlertsView() {
     setCurrentView('alerts')
+    closeLeftPanel()
     await refreshArchiveList()
   }
 
   async function openArchiveRun(runId: string) {
     setArchiveOpeningId(runId)
     setArchiveError(null)
+    closeLeftPanel()
     try {
       const detail = await getRun(runId)
       const matched = detail.matched_groups
@@ -475,7 +508,15 @@ export default function App() {
   /* ========== RENDER ========== */
 
   return (
-    <div className="app-shell">
+    <div
+      className={[
+        'app-shell',
+        isLeftPanelOpen ? '' : 'left-panel-collapsed',
+        isRightPanelOpen ? '' : 'right-panel-collapsed',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {/* ===== 1. Nav Sidebar (Narrow Icon Bar) ===== */}
       <nav className="nav-sidebar" id="nav-sidebar">
         <button className="nav-logo" title="X Haber Analiz Pro" id="nav-logo">
@@ -510,15 +551,6 @@ export default function App() {
           <span className="icon">assessment</span>
         </button>
         <button
-          className={`nav-item${currentView === 'search' ? ' active' : ''}`}
-          title="Arama"
-          id="nav-search"
-          type="button"
-          onClick={showSearchView}
-        >
-          <span className="icon">search</span>
-        </button>
-        <button
           className={`nav-item${currentView === 'alerts' ? ' active' : ''}`}
           title="Bildirimler"
           id="nav-notifications"
@@ -530,15 +562,42 @@ export default function App() {
 
         <div className="nav-spacer" />
 
-        <button className="nav-item" title="Ayarlar" id="nav-settings">
+        <button
+          className={`nav-item${isLeftPanelOpen ? ' active' : ''}`}
+          title={isLeftPanelOpen ? 'Ayarları kapat' : 'Ayarlar'}
+          id="nav-settings"
+          type="button"
+          onClick={toggleLeftPanel}
+          aria-expanded={isLeftPanelOpen}
+          aria-controls="left-panel"
+        >
           <span className="icon">settings</span>
         </button>
       </nav>
+
+      {/* Backdrop for closing left panel */}
+      {isLeftPanelOpen && (
+        <button
+          type="button"
+          className="left-panel-backdrop"
+          aria-label="Ayarlar panelini kapat"
+          onClick={closeLeftPanel}
+        />
+      )}
 
       {/* ===== 2. Left Panel (Settings + Channels) ===== */}
       <aside className="left-panel" id="left-panel">
         <div className="left-panel-header">
           <h1>Haber Analiz</h1>
+          <button
+            type="button"
+            className="left-panel-close"
+            onClick={closeLeftPanel}
+            aria-label="Ayarlar panelini kapat"
+            title="Kapat"
+          >
+            <span className="icon">close</span>
+          </button>
         </div>
 
         {/* API Settings */}
@@ -654,6 +713,17 @@ export default function App() {
                 Arşiv
                 {archiveRuns.length > 0 && <span className="feed-header-count">({archiveRuns.length})</span>}
               </h2>
+              <div className="feed-header-tools">
+                <div className="feed-search">
+                  <span className="icon">search</span>
+                  <input
+                    type="text"
+                    placeholder="Arşivde kanal / ID ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Arşiv arama"
+                  />
+                </div>
               <button
                 className="fetch-btn"
                 type="button"
@@ -673,6 +743,7 @@ export default function App() {
                   </>
                 )}
               </button>
+              </div>
             </div>
 
             <div className="feed-content">
@@ -690,7 +761,16 @@ export default function App() {
                   <p>Henüz kayıtlı analiz yok. Dashboard'dan tweet çekince otomatik olarak buraya kaydedilir.</p>
                 </div>
               ) : (
-                archiveRuns.map((run) => {
+                archiveRuns
+                  .filter((r) => {
+                    const q = searchQuery.trim().toLowerCase()
+                    if (!q) return true
+                    return (
+                      r.run_id.toLowerCase().includes(q) ||
+                      r.channels.some((c) => c.toLowerCase().includes(q))
+                    )
+                  })
+                  .map((run) => {
                   const isOpening = archiveOpeningId === run.run_id
                   const isDeleting = archiveDeletingId === run.run_id
                   return (
@@ -786,10 +866,22 @@ export default function App() {
           <>
             <div className="feed-header">
               <h2>Analiz Raporları</h2>
-              <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
-                {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
-                Yenile
-              </button>
+              <div className="feed-header-tools">
+                <div className="feed-search">
+                  <span className="icon">search</span>
+                  <input
+                    type="text"
+                    placeholder="Raporlarda kanal / ID ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Rapor arama"
+                  />
+                </div>
+                <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
+                  {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
+                  Yenile
+                </button>
+              </div>
             </div>
             <div className="feed-content">
               {archiveLoading && archiveRuns.length === 0 ? (
@@ -814,83 +906,89 @@ export default function App() {
                   </div>
                   <h3>Tüm Kanallar</h3>
                   <div className="archive-card-channels" style={{ marginBottom: '20px' }}>
-                    {Array.from(new Set(archiveRuns.flatMap(r => r.channels))).map(ch => (
+                    {Array.from(new Set(archiveRuns.flatMap((r) => r.channels))).map((ch) => (
                       <span className="source-badge" key={ch}>
                         <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
                         @{ch}
                       </span>
                     ))}
                   </div>
-                  <div className="feed-empty" style={{ marginTop: '20px' }}>
-                    <span className="icon">bar_chart</span>
-                    <h3>Daha fazla detay</h3>
-                    <p>Detaylı duygu analizi grafikleri yakında burada yer alacaktır.</p>
+                  <h3 style={{ margin: '0 0 10px' }}>İşlem Geçmişi</h3>
+                  <div className="analytics-table">
+                    <div className="analytics-table-header">
+                      <div>Tarih</div>
+                      <div>Kanallar</div>
+                      <div>Grup</div>
+                      <div>Yorum</div>
+                      <div>Durum</div>
+                    </div>
+                    {archiveRuns
+                      .filter((r) => {
+                        const q = searchQuery.trim().toLowerCase()
+                        if (!q) return true
+                        return (
+                          r.run_id.toLowerCase().includes(q) ||
+                          r.channels.some((c) => c.toLowerCase().includes(q))
+                        )
+                      })
+                      .map((r) => (
+                        <button
+                          key={`analytics-row-${r.run_id}`}
+                          type="button"
+                          className="analytics-table-row"
+                          onClick={() => openArchiveRun(r.run_id)}
+                          title="Detayları aç"
+                        >
+                          <div>{formatRunTimestamp(r.created_at)}</div>
+                          <div className="mono">{r.channels.join(', ')}</div>
+                          <div>{r.total_groups}</div>
+                          <div>{r.total_replies}</div>
+                          <div className="pill-group">
+                            <span className={`pill ${r.has_replies ? 'on' : 'off'}`}>Yorum</span>
+                            <span className={`pill ${r.has_sentiment ? 'on' : 'off'}`}>Analiz</span>
+                          </div>
+                        </button>
+                      ))}
                   </div>
                 </div>
               )}
-            </div>
-          </>
-        ) : currentView === 'search' ? (
-          <>
-            <div className="feed-header">
-              <h2>Arama</h2>
-            </div>
-            <div className="feed-content">
-              <div className="search-bar" style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-                <input
-                  type="text"
-                  placeholder="Kanal adı veya arşiv ID ara..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                />
-              </div>
-              <div className="feed-content">
-                {archiveRuns.filter(r => 
-                  r.channels.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())) || 
-                  r.run_id.includes(searchQuery)
-                ).length === 0 ? (
-                  <div className="feed-empty">Sonuç bulunamadı.</div>
-                ) : (
-                  archiveRuns.filter(r => 
-                    r.channels.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())) || 
-                    r.run_id.includes(searchQuery)
-                  ).map(run => (
-                    <article className="archive-card" key={`search-${run.run_id}`} onClick={() => openArchiveRun(run.run_id)} style={{ cursor: 'pointer' }}>
-                      <div className="archive-card-header">
-                        <div className="archive-card-title">
-                          <span className="icon">schedule</span>
-                          <span>{formatRunTimestamp(run.created_at)}</span>
-                        </div>
-                      </div>
-                      <div className="archive-card-channels">
-                        {run.channels.map((ch) => (
-                          <span className="source-badge" key={`${run.run_id}-${ch}`}>
-                            <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
-                            @{ch}
-                          </span>
-                        ))}
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
             </div>
           </>
         ) : currentView === 'alerts' ? (
           <>
             <div className="feed-header">
               <h2>Bildirimler</h2>
-              <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
-                {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
-                Yenile
-              </button>
+              <div className="feed-header-tools">
+                <div className="feed-search">
+                  <span className="icon">search</span>
+                  <input
+                    type="text"
+                    placeholder="Bildirimlerde kanal / ID ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Bildirim arama"
+                  />
+                </div>
+                <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
+                  {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
+                  Yenile
+                </button>
+              </div>
             </div>
             <div className="feed-content">
                {archiveRuns.length === 0 ? (
                  <div className="feed-empty">Bildirim yok.</div>
                ) : (
-                 archiveRuns.map((run) => (
+                 archiveRuns
+                   .filter((r) => {
+                     const q = searchQuery.trim().toLowerCase()
+                     if (!q) return true
+                     return (
+                       r.run_id.toLowerCase().includes(q) ||
+                       r.channels.some((c) => c.toLowerCase().includes(q))
+                     )
+                   })
+                   .map((run) => (
                    <div key={`alert-${run.run_id}`} className="alert-card" style={{ padding: '15px', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '10px', borderLeft: '4px solid var(--accent)' }}>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
                        <span className="icon" style={{ color: 'var(--accent)', fontSize: '1.2rem' }}>notifications</span>
@@ -911,6 +1009,17 @@ export default function App() {
             Gruplanmış Haberler
             {shownGroups.length > 0 && <span className="feed-header-count">({shownGroups.length})</span>}
           </h2>
+          <div className="feed-header-tools">
+            <div className="feed-search">
+              <span className="icon">search</span>
+              <input
+                type="text"
+                placeholder="Haberlerde ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Haber arama"
+              />
+            </div>
           <button
             className={`fetch-btn${isMatching ? ' fetch-btn-loading' : ''}`}
             type="button"
@@ -930,6 +1039,7 @@ export default function App() {
               </>
             )}
           </button>
+          </div>
         </div>
 
         <div className="feed-content">
@@ -1103,6 +1213,15 @@ export default function App() {
       <aside className="right-panel" id="right-panel">
         <div className="right-panel-header">
           <h2>Analiz Paneli</h2>
+          <button
+            type="button"
+            className="right-panel-collapse"
+            onClick={toggleRightPanel}
+            aria-label={isRightPanelOpen ? 'Analiz panelini kapat' : 'Analiz panelini aç'}
+            title={isRightPanelOpen ? 'Kapat' : 'Aç'}
+          >
+            <span className="icon">{isRightPanelOpen ? 'chevron_right' : 'chevron_left'}</span>
+          </button>
         </div>
 
         {!selectedGroup ? (
@@ -1323,6 +1442,18 @@ export default function App() {
           </>
         )}
       </aside>
+
+      {!isRightPanelOpen && (
+        <button
+          type="button"
+          className="right-panel-handle"
+          onClick={toggleRightPanel}
+          aria-label="Analiz panelini aç"
+          title="Analiz panelini aç"
+        >
+          <span className="icon">chevron_left</span>
+        </button>
+      )}
     </div>
   )
 }
