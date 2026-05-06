@@ -601,7 +601,12 @@ export default function App() {
     setCompareResult(null)
     setCurrentRunId(null)
     try {
-      const response = await runMatch({ channels: activeChannels, tweets_per_channel: Number(tweetsPerChannel) || 10, min_channels_for_match: Number(minChannelsForMatch) || 2 })
+      const response = await runMatch({
+        channels: activeChannels,
+        tweets_per_channel: Number(tweetsPerChannel) || 10,
+        min_channels_for_match: Number(minChannelsForMatch) || 2,
+        twitter_bearer_token: twitterBearerToken.trim(),
+      })
       setMatchResult(response)
       setCurrentRunId(response.run_id ?? null)
       setLastRunAtIso(new Date().toISOString())
