@@ -193,7 +193,8 @@ export default function App() {
     return stored === 'true'
   })
 
-  const [currentView, setCurrentView] = useState<'dashboard' | 'archive'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'archive' | 'analytics' | 'search' | 'alerts'>('dashboard')
+  const [searchQuery, setSearchQuery] = useState('')
   const [currentRunId, setCurrentRunId] = useState<string | null>(null)
   const [archiveRuns, setArchiveRuns] = useState<RunSummary[]>([])
   const [archiveLoading, setArchiveLoading] = useState(false)
@@ -395,6 +396,22 @@ export default function App() {
     await refreshArchiveList()
   }
 
+  async function showAnalyticsView() {
+    setCurrentView('analytics')
+    await refreshArchiveList()
+  }
+
+  async function showSearchView() {
+    setCurrentView('search')
+    setSearchQuery('')
+    await refreshArchiveList()
+  }
+
+  async function showAlertsView() {
+    setCurrentView('alerts')
+    await refreshArchiveList()
+  }
+
   async function openArchiveRun(runId: string) {
     setArchiveOpeningId(runId)
     setArchiveError(null)
@@ -496,13 +513,31 @@ export default function App() {
         >
           <span className="icon">history</span>
         </button>
-        <button className="nav-item" title="Raporlar" id="nav-reports">
+        <button
+          className={`nav-item${currentView === 'analytics' ? ' active' : ''}`}
+          title="Raporlar"
+          id="nav-reports"
+          type="button"
+          onClick={showAnalyticsView}
+        >
           <span className="icon">assessment</span>
         </button>
-        <button className="nav-item" title="Arama" id="nav-search">
+        <button
+          className={`nav-item${currentView === 'search' ? ' active' : ''}`}
+          title="Arama"
+          id="nav-search"
+          type="button"
+          onClick={showSearchView}
+        >
           <span className="icon">search</span>
         </button>
-        <button className="nav-item" title="Bildirimler" id="nav-notifications">
+        <button
+          className={`nav-item${currentView === 'alerts' ? ' active' : ''}`}
+          title="Bildirimler"
+          id="nav-notifications"
+          type="button"
+          onClick={showAlertsView}
+        >
           <span className="icon">notifications</span>
         </button>
 
@@ -765,6 +800,128 @@ export default function App() {
                   )
                 })
               )}
+            </div>
+          </>
+        ) : currentView === 'analytics' ? (
+          <>
+            <div className="feed-header">
+              <h2>Analiz Raporları</h2>
+              <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
+                {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
+                Yenile
+              </button>
+            </div>
+            <div className="feed-content">
+              {archiveLoading && archiveRuns.length === 0 ? (
+                <div className="feed-empty">
+                   <span className="spinner" /> Yükleniyor...
+                </div>
+              ) : (
+                <div className="analytics-overview">
+                  <div className="summary-stat-row" style={{ marginBottom: '20px' }}>
+                    <div className="summary-stat-card">
+                      <span className="stat-value">{archiveRuns.length}</span>
+                      <span className="stat-label">Toplam İşlem</span>
+                    </div>
+                    <div className="summary-stat-card">
+                      <span className="stat-value">{archiveRuns.reduce((acc, r) => acc + r.total_groups, 0)}</span>
+                      <span className="stat-label">Toplam Grup</span>
+                    </div>
+                    <div className="summary-stat-card">
+                      <span className="stat-value">{archiveRuns.reduce((acc, r) => acc + r.total_replies, 0)}</span>
+                      <span className="stat-label">Toplam Yorum</span>
+                    </div>
+                  </div>
+                  <h3>Tüm Kanallar</h3>
+                  <div className="archive-card-channels" style={{ marginBottom: '20px' }}>
+                    {Array.from(new Set(archiveRuns.flatMap(r => r.channels))).map(ch => (
+                      <span className="source-badge" key={ch}>
+                        <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                        @{ch}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="feed-empty" style={{ marginTop: '20px' }}>
+                    <span className="icon">bar_chart</span>
+                    <h3>Daha fazla detay</h3>
+                    <p>Detaylı duygu analizi grafikleri yakında burada yer alacaktır.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : currentView === 'search' ? (
+          <>
+            <div className="feed-header">
+              <h2>Arama</h2>
+            </div>
+            <div className="feed-content">
+              <div className="search-bar" style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="Kanal adı veya arşiv ID ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div className="feed-content">
+                {archiveRuns.filter(r => 
+                  r.channels.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())) || 
+                  r.run_id.includes(searchQuery)
+                ).length === 0 ? (
+                  <div className="feed-empty">Sonuç bulunamadı.</div>
+                ) : (
+                  archiveRuns.filter(r => 
+                    r.channels.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())) || 
+                    r.run_id.includes(searchQuery)
+                  ).map(run => (
+                    <article className="archive-card" key={`search-${run.run_id}`} onClick={() => openArchiveRun(run.run_id)} style={{ cursor: 'pointer' }}>
+                      <div className="archive-card-header">
+                        <div className="archive-card-title">
+                          <span className="icon">schedule</span>
+                          <span>{formatRunTimestamp(run.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="archive-card-channels">
+                        {run.channels.map((ch) => (
+                          <span className="source-badge" key={`${run.run_id}-${ch}`}>
+                            <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                            @{ch}
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        ) : currentView === 'alerts' ? (
+          <>
+            <div className="feed-header">
+              <h2>Bildirimler</h2>
+              <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
+                {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
+                Yenile
+              </button>
+            </div>
+            <div className="feed-content">
+               {archiveRuns.length === 0 ? (
+                 <div className="feed-empty">Bildirim yok.</div>
+               ) : (
+                 archiveRuns.map((run) => (
+                   <div key={`alert-${run.run_id}`} className="alert-card" style={{ padding: '15px', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '10px', borderLeft: '4px solid var(--accent)' }}>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                       <span className="icon" style={{ color: 'var(--accent)', fontSize: '1.2rem' }}>notifications</span>
+                       <strong style={{ color: 'var(--text-primary)' }}>{formatRunTimestamp(run.created_at)}</strong>
+                     </div>
+                     <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', paddingLeft: '34px' }}>
+                       <strong>{run.channels.join(', ')}</strong> kanallarında yapılan analizde <strong>{run.total_groups}</strong> ortak haber ve <strong>{run.total_replies}</strong> yorum bulundu.
+                     </p>
+                   </div>
+                 ))
+               )}
             </div>
           </>
         ) : (
