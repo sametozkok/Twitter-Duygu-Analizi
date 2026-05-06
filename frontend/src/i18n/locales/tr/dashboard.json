@@ -1,0 +1,104 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "archive": "Arşiv",
+    "reports": "Raporlar",
+    "notifications": "Bildirimler",
+    "settings": "Ayarlar",
+    "settingsClose": "Ayarları kapat"
+  },
+  "reports": {
+    "title": "Analiz Raporları",
+    "totalRuns": "Toplam İşlem",
+    "totalGroups": "Toplam Grup",
+    "totalReplies": "Toplam Yorum",
+    "allChannels": "Tüm Kanallar",
+    "history": "İşlem Geçmişi",
+    "openDetails": "Detayları aç"
+  },
+  "alerts": {
+    "title": "Bildirimler",
+    "empty": "Bildirim yok.",
+    "message": "{{channels}} kanallarında yapılan analizde {{groups}} ortak haber ve {{replies}} yorum bulundu."
+  },
+  "archive": {
+    "open": "Aç",
+    "deleteTitle": "Bu kaydı sil",
+    "flags": {
+      "repliesOn": "Yorumlar",
+      "repliesOff": "Yorum yok",
+      "sentimentOn": "Duygu analizli",
+      "sentimentOff": "Analiz yapılmamış"
+    }
+  },
+  "feed": {
+    "groupedNews": "Gruplanmış Haberler",
+    "newsSearchPlaceholder": "Haberlerde ara...",
+    "archiveSearchPlaceholder": "Arşivde kanal / ID ara...",
+    "reportsSearchPlaceholder": "Raporlarda kanal / ID ara...",
+    "alertsSearchPlaceholder": "Bildirimlerde kanal / ID ara...",
+    "fetchTweets": "Tweetleri Çek",
+    "fetchingTweets": "Çekiliyor...",
+    "archiveEmptyTitle": "Arşiv boş",
+    "archiveEmptyBody": "Henüz kayıtlı analiz yok. Dashboard'dan tweet çekince otomatik olarak buraya kaydedilir.",
+    "emptyTitle": "Henüz eşleşme yok",
+    "emptyBody": "Kanalları ayarlayın ve \"Tweetleri Çek\" butonuna tıklayarak haber gruplarını oluşturun."
+  },
+  "onboarding": {
+    "title": "Hızlı Başlangıç",
+    "step1": "Kanalları ekleyin",
+    "step2": "Tweetleri çekin ve eşleştirin",
+    "step3": "Yorumları çekip analiz edin",
+    "dismiss": "Anladım",
+    "openSettings": "Kanalları düzenle",
+    "fetchTweets": "Tweetleri çek"
+  },
+  "status": {
+    "lastRun": "Son işlem",
+    "channels": "{{count}} kanal",
+    "groups": "{{count}} grup",
+    "replies": "{{count}} yorum",
+    "none": "Henüz işlem yok"
+  },
+  "group": {
+    "comments": "{{count}} yorum",
+    "channels": "{{count}} kanal",
+    "groups": "{{count}} grup"
+  },
+  "tweet": {
+    "openOnX": "X'te aç",
+    "likes": "Beğeni",
+    "replies": "Yanıt",
+    "retweets": "Retweet",
+    "noComments": "Yorum yok",
+    "hideComments": "Yorumları gizle ({{count}})",
+    "showComments": "Yorumları göster ({{count}})"
+  },
+  "comments": {
+    "sort": {
+      "newest": "En yeni",
+      "top": "En çok beğenilen"
+    },
+    "sentiment": {
+      "all": "Tümü",
+      "positive": "Pozitif",
+      "negative": "Negatif",
+      "neutral": "Nötr"
+    }
+  },
+  "errors": {
+    "needMinChannels": "En az 2 kanal girmen gerekiyor.",
+    "matchUnexpected": "Eşleştirme sırasında beklenmeyen hata oldu.",
+    "repliesNeedMatchFirst": "Önce tweetleri çekip eşleşmeleri bulman gerekiyor.",
+    "repliesUnexpected": "Yorum çekme sırasında beklenmeyen hata oldu.",
+    "sentimentNeedRepliesFirst": "Duygu karşılaştırması için önce yorumları çekmelisin.",
+    "sentimentUnexpected": "Duygu karşılaştırması sırasında beklenmeyen hata oldu.",
+    "archiveListFailed": "Arşiv listesi alınamadı.",
+    "archiveRunLoadFailed": "Arşiv kaydı yüklenemedi.",
+    "archiveRunDeleteFailed": "Arşiv kaydı silinemedi."
+  },
+  "info": {
+    "noRepliesFound": "Yorum bulunamadı. Tweetlerde yorumlar kapalı olabilir veya auth bilgileri eksik/geçersiz olabilir."
+  }
+}
+

@@ -1,0 +1,33 @@
+{
+  "panelTitle": "Analysis Panel",
+  "resizeHandleLabel": "Panel resizer",
+  "openPanel": "Open analysis panel",
+  "closePanel": "Close analysis panel",
+  "selectGroupTitle": "Select a Group",
+  "selectGroupBody": "Select a news group from the feed to see analysis results.",
+  "sentimentTitle": "Sentiment Analysis",
+  "pullComments": "Fetch Comments for Analysis",
+  "pullingComments": "Fetching comments...",
+  "compareSentiment": "Compare Sentiment",
+  "comparingSentiment": "Comparing...",
+  "sentimentResults": "Sentiment Results",
+  "commentsShort": "Comments",
+  "sentimentCompareShort": "Sentiment compare",
+  "wordCloud": "Word Cloud",
+  "channelComparison": "Channel Comparison",
+  "jsonSaved": "JSON saved: {{path}}",
+  "noResultForAlgorithm": "No results found for this algorithm.",
+  "locked": {
+    "title": "Sentiment Analysis"
+  },
+  "sentiments": {
+    "positive": "Positive",
+    "negative": "Negative",
+    "neutral": "Neutral"
+  },
+  "algorithm": {
+    "bert": "BERT",
+    "api": "Gemini API"
+  }
+}
+

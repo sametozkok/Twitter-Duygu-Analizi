@@ -1,0 +1,104 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "archive": "Archive",
+    "reports": "Reports",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "settingsClose": "Close settings"
+  },
+  "reports": {
+    "title": "Reports",
+    "totalRuns": "Total Runs",
+    "totalGroups": "Total Groups",
+    "totalReplies": "Total Comments",
+    "allChannels": "All Channels",
+    "history": "Run History",
+    "openDetails": "Open details"
+  },
+  "alerts": {
+    "title": "Notifications",
+    "empty": "No notifications.",
+    "message": "Analysis on {{channels}} found {{groups}} shared news groups and {{replies}} comments."
+  },
+  "archive": {
+    "open": "Open",
+    "deleteTitle": "Delete this run",
+    "flags": {
+      "repliesOn": "Comments",
+      "repliesOff": "No comments",
+      "sentimentOn": "Sentiment ready",
+      "sentimentOff": "Not analyzed"
+    }
+  },
+  "feed": {
+    "groupedNews": "Grouped News",
+    "newsSearchPlaceholder": "Search news...",
+    "archiveSearchPlaceholder": "Search archive by channel / ID...",
+    "reportsSearchPlaceholder": "Search reports by channel / ID...",
+    "alertsSearchPlaceholder": "Search notifications by channel / ID...",
+    "fetchTweets": "Fetch Tweets",
+    "fetchingTweets": "Fetching...",
+    "archiveEmptyTitle": "Archive is empty",
+    "archiveEmptyBody": "No saved analyses yet. When you fetch tweets from the dashboard, runs are saved here automatically.",
+    "emptyTitle": "No matches yet",
+    "emptyBody": "Configure channels and click \"Fetch Tweets\" to generate grouped news."
+  },
+  "onboarding": {
+    "title": "Quick Start",
+    "step1": "Add channels",
+    "step2": "Fetch & match tweets",
+    "step3": "Fetch comments and analyze",
+    "dismiss": "Got it",
+    "openSettings": "Edit channels",
+    "fetchTweets": "Fetch tweets"
+  },
+  "status": {
+    "lastRun": "Last run",
+    "channels": "{{count}} channels",
+    "groups": "{{count}} groups",
+    "replies": "{{count}} comments",
+    "none": "No runs yet"
+  },
+  "group": {
+    "comments": "{{count}} comments",
+    "channels": "{{count}} channels",
+    "groups": "{{count}} groups"
+  },
+  "tweet": {
+    "openOnX": "Open on X",
+    "likes": "Likes",
+    "replies": "Replies",
+    "retweets": "Retweets",
+    "noComments": "No comments",
+    "hideComments": "Hide comments ({{count}})",
+    "showComments": "Show comments ({{count}})"
+  },
+  "comments": {
+    "sort": {
+      "newest": "Newest",
+      "top": "Top liked"
+    },
+    "sentiment": {
+      "all": "All",
+      "positive": "Positive",
+      "negative": "Negative",
+      "neutral": "Neutral"
+    }
+  },
+  "errors": {
+    "needMinChannels": "You need to enter at least 2 channels.",
+    "matchUnexpected": "An unexpected error happened while matching.",
+    "repliesNeedMatchFirst": "You need to fetch tweets and match them first.",
+    "repliesUnexpected": "An unexpected error happened while fetching comments.",
+    "sentimentNeedRepliesFirst": "Fetch comments before comparing sentiment.",
+    "sentimentUnexpected": "An unexpected error happened while comparing sentiment.",
+    "archiveListFailed": "Failed to load archive list.",
+    "archiveRunLoadFailed": "Failed to load archive run.",
+    "archiveRunDeleteFailed": "Failed to delete archive run."
+  },
+  "info": {
+    "noRepliesFound": "No comments found. Replies may be disabled or auth data may be missing/invalid."
+  }
+}
+

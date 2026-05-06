@@ -1,0 +1,32 @@
+{
+  "title": "Haber Analiz",
+  "apiSettings": "API Ayarları",
+  "parameters": "Parametreler",
+  "channelManagement": "Kanal Yönetimi",
+  "display": "Görünüm",
+  "language": "Dil",
+  "theme": "Tema",
+  "themeModes": {
+    "dark": "Koyu",
+    "light": "Açık",
+    "system": "Sistem"
+  },
+  "languageModes": {
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "fields": {
+    "authToken": "Auth Token",
+    "ct0": "ct0",
+    "bearerToken": "Bearer Token",
+    "tweetsPerChannel": "Tweet / Kanal",
+    "minCommonThreshold": "Ortak Eşik",
+    "repliesPerTweet": "Yorum / Tweet",
+    "channelPlaceholder": "kullanıcı adı veya link",
+    "addChannel": "Kanal Ekle",
+    "minTwoChannels": "En az 2 kanal gerekli",
+    "deleteChannel": "Kanalı sil",
+    "clickToEdit": "Düzenlemek için tıklayın"
+  }
+}
+

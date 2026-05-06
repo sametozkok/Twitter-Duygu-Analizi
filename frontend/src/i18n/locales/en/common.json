@@ -1,0 +1,18 @@
+{
+  "appName": "X News Analysis",
+  "close": "Close",
+  "open": "Open",
+  "loading": "Loading...",
+  "opening": "Opening...",
+  "refresh": "Refresh",
+  "search": "Search",
+  "delete": "Delete",
+  "yes": "Yes",
+  "no": "No",
+  "unknown": "Unknown",
+  "notAvailable": "-",
+  "confirm": {
+    "deleteRun": "Are you sure you want to delete this archive run?"
+  }
+}
+

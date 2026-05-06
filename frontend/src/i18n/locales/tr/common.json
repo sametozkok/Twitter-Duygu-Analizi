@@ -1,0 +1,18 @@
+{
+  "appName": "X Haber Analiz",
+  "close": "Kapat",
+  "open": "Aç",
+  "loading": "Yükleniyor...",
+  "opening": "Açılıyor...",
+  "refresh": "Yenile",
+  "search": "Ara",
+  "delete": "Sil",
+  "yes": "Evet",
+  "no": "Hayır",
+  "unknown": "Bilinmiyor",
+  "notAvailable": "-",
+  "confirm": {
+    "deleteRun": "Bu arşiv kaydını silmek istediğine emin misin?"
+  }
+}
+

@@ -1,6 +1,8 @@
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './styles.css'
+import './i18n'
+import { ThemeProvider } from './theme/ThemeProvider'
 
 // Prevent Material Symbols ligature text from flashing:
 // show skeletons until the icon font is ready.
@@ -52,5 +54,7 @@ try {
 }
 
 createRoot(document.getElementById('root') as HTMLElement).render(
-  <App />,
+  <ThemeProvider>
+    <App />
+  </ThemeProvider>,
 )

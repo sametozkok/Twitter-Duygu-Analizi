@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { deleteRun, getRun, listRuns, runMatch, runReplies, runSentimentCompare } from './lib/api'
+import { SegmentedControl } from './components/SegmentedControl'
+import { ChannelAvatar } from './components/ChannelAvatar'
+import { EmptyState } from './components/EmptyState'
+import { Metric } from './components/Metric'
 import { Skeleton, SkeletonText } from './components/Skeleton'
+import { OnboardingCard } from './features/dashboard/OnboardingCard'
+import { AppearanceSettings } from './features/settings/AppearanceSettings'
+import { SentimentDashboard } from './features/analysis/SentimentDashboard'
+import i18n, { getIntlLocaleTag } from './i18n'
+import type { SupportedLocale } from './i18n'
+import { useTheme } from './theme/ThemeProvider'
 import type {
   MatchResponse,
   RepliesResponse,
@@ -18,7 +29,8 @@ function renderTweetLabel(tweet: TweetItem, index: number) {
 function formatCompactNumber(value?: number) {
   const numeric = Number(value)
   if (!Number.isFinite(numeric) || numeric < 0) return '0'
-  return new Intl.NumberFormat('tr-TR', { notation: 'compact', maximumFractionDigits: 1 }).format(numeric)
+  const locale = getIntlLocaleTag((i18n.language as any) || 'tr')
+  return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(numeric)
 }
 
 function formatMetricValue(value?: number) {
@@ -33,14 +45,16 @@ function formatDateLabel(value?: string) {
   if (Number.isNaN(parsed)) return value
   // API returns UTC, add 3 hours for Turkey (UTC+3)
   const corrected = new Date(parsed + 3 * 60 * 60 * 1000)
-  return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(corrected)
+  const locale = getIntlLocaleTag((i18n.language as any) || 'tr')
+  return new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(corrected)
 }
 
 function formatRunTimestamp(value?: string) {
   if (!value) return '-'
   const parsed = Date.parse(value)
   if (Number.isNaN(parsed)) return value
-  return new Intl.DateTimeFormat('tr-TR', {
+  const locale = getIntlLocaleTag((i18n.language as any) || 'tr')
+  return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -75,6 +89,7 @@ function XLogo() {
 /* ========== Doughnut Chart Component ========== */
 
 function DoughnutChart({ positive, negative, neutral }: { positive: number; negative: number; neutral: number }) {
+  const { t } = useTranslation('analysis')
   const total = positive + negative + neutral
   if (total === 0) return null
 
@@ -94,7 +109,12 @@ function DoughnutChart({ positive, negative, neutral }: { positive: number; nega
   const negOffset = pLen + gap
   const neuOffset = pLen + negLen + gap * 2
 
-  const dominantLabel = pPct >= negPct && pPct >= neuPct ? 'Pozitif' : negPct >= pPct && negPct >= neuPct ? 'Negatif' : 'Nötr'
+  const dominantLabel =
+    pPct >= negPct && pPct >= neuPct
+      ? t('sentiments.positive')
+      : negPct >= pPct && negPct >= neuPct
+        ? t('sentiments.negative')
+        : t('sentiments.neutral')
   const dominantPct = Math.round(Math.max(pPct, negPct, neuPct))
 
   return (
@@ -113,15 +133,15 @@ function DoughnutChart({ positive, negative, neutral }: { positive: number; nega
       <div className="chart-legend">
         <div className="legend-item">
           <span className="legend-dot" style={{ background: 'var(--positive)' }} />
-          <strong>{Math.round(pPct)}%</strong> Pozitif
+          <strong>{Math.round(pPct)}%</strong> {t('sentiments.positive')}
         </div>
         <div className="legend-item">
           <span className="legend-dot" style={{ background: 'var(--negative)' }} />
-          <strong>{Math.round(negPct)}%</strong> Negatif
+          <strong>{Math.round(negPct)}%</strong> {t('sentiments.negative')}
         </div>
         <div className="legend-item">
           <span className="legend-dot" style={{ background: 'var(--neutral)' }} />
-          <strong>{Math.round(neuPct)}%</strong> Nötr
+          <strong>{Math.round(neuPct)}%</strong> {t('sentiments.neutral')}
         </div>
       </div>
     </div>
@@ -131,6 +151,7 @@ function DoughnutChart({ positive, negative, neutral }: { positive: number; nega
 /* ========== Word Cloud Component ========== */
 
 function WordCloud({ words }: { words: { text: string; weight: number }[] }) {
+  const { t } = useTranslation('analysis')
   if (!words.length) return null
 
   const maxWeight = Math.max(...words.map((w) => w.weight))
@@ -140,7 +161,7 @@ function WordCloud({ words }: { words: { text: string; weight: number }[] }) {
     <div className="word-cloud-section">
       <div className="word-cloud-title">
         <span className="icon">cloud</span>
-        Kelime Bulutu
+        {t('wordCloud')}
       </div>
       <div className="word-cloud">
         {words.map((w, i) => {
@@ -160,7 +181,7 @@ function WordCloud({ words }: { words: { text: string; weight: number }[] }) {
 
 function ArchiveListSkeleton() {
   return (
-    <div className="feed-content" aria-label="Arşiv yükleniyor">
+    <div className="feed-content" aria-label={i18n.t('common:loading')}>
       {Array.from({ length: 6 }).map((_, i) => (
         <article className="archive-card" key={`archive-skel-${i}`}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -202,7 +223,7 @@ function ArchiveListSkeleton() {
 
 function AnalyticsSkeleton() {
   return (
-    <div className="feed-content" aria-label="Raporlar yükleniyor">
+    <div className="feed-content" aria-label={i18n.t('common:loading')}>
       <div className="analytics-overview">
         <div className="summary-stat-row" style={{ marginBottom: '20px' }}>
           {Array.from({ length: 3 }).map((_, i) => (
@@ -244,7 +265,7 @@ function AnalyticsSkeleton() {
 
 function AlertsSkeleton() {
   return (
-    <div className="feed-content" aria-label="Bildirimler yükleniyor">
+    <div className="feed-content" aria-label={i18n.t('common:loading')}>
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={`alert-skel-${i}`}
@@ -269,7 +290,7 @@ function AlertsSkeleton() {
 
 function DashboardGroupsSkeleton() {
   return (
-    <div className="feed-content" aria-label="Haberler yükleniyor">
+    <div className="feed-content" aria-label={i18n.t('common:loading')}>
       {Array.from({ length: 7 }).map((_, i) => (
         <article className="news-group-card" key={`group-skel-${i}`}>
           <div className="group-card-header">
@@ -295,7 +316,7 @@ function DashboardGroupsSkeleton() {
 
 function RightPanelSkeleton({ title }: { title: string }) {
   return (
-    <div style={{ padding: '0 16px 16px' }} aria-label={`${title} yükleniyor`}>
+    <div style={{ padding: '0 16px 16px' }} aria-label={`${title} ${i18n.t('common:loading')}`}>
       <section className="analysis-summary">
         <Skeleton height={18} radius={999} style={{ width: '80%', marginBottom: 12 }} />
         <div className="summary-channels" style={{ marginBottom: 14 }}>
@@ -346,6 +367,8 @@ const ALGORITHM_ORDER = [
 /* ========== Main App ========== */
 
 export default function App() {
+  const { t } = useTranslation(['common', 'dashboard', 'settings', 'analysis'])
+  const { mode: themeMode, setMode: setThemeMode } = useTheme()
   /* --- State --- */
   const [channels, setChannels] = useState<string[]>(['haber', 'bpthaber', 'pusholder'])
   const [tweetsPerChannel, setTweetsPerChannel] = useState<number | ''>(10)
@@ -363,8 +386,12 @@ export default function App() {
   const [repliesResult, setRepliesResult] = useState<RepliesResponse | null>(null)
   const [compareResult, setCompareResult] = useState<SentimentCompareResponse | null>(null)
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0)
+  const [selectedTweetIndex, setSelectedTweetIndex] = useState(0)
+  const [selectedAlgorithmKey, setSelectedAlgorithmKey] = useState<string>(ALGORITHM_ORDER[0]?.key ?? 'bert')
   const [editingChannelIndex, setEditingChannelIndex] = useState<number | null>(null)
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
+  const [commentSortMode, setCommentSortMode] = useState<'newest' | 'top'>('newest')
+  const [commentSentimentFilter, setCommentSentimentFilter] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all')
 
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(false)
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true)
@@ -378,6 +405,15 @@ export default function App() {
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const [archiveOpeningId, setArchiveOpeningId] = useState<string | null>(null)
   const [archiveDeletingId, setArchiveDeletingId] = useState<string | null>(null)
+  const [lastRunAtIso, setLastRunAtIso] = useState<string | null>(null)
+  const [currentRunChannels, setCurrentRunChannels] = useState<string[] | null>(null)
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem('onboardingDismissed') === 'true'
+    } catch {
+      return false
+    }
+  })
 
   const activeChannels = useMemo(
     () => channels.map((item) => item.trim()).filter((item) => item.length > 0),
@@ -467,6 +503,24 @@ export default function App() {
     return cloud
   }, [algorithmItems])
 
+  const sentimentByText = useMemo(() => {
+    if (!selectedCompareGroup || !selectedAlgorithmKey) return null
+    const map = new Map<string, { label?: string; score?: number }>()
+    Object.values(selectedCompareGroup.channel_results).forEach((cr) => {
+      const algo = cr.algorithms?.[selectedAlgorithmKey]
+      if (!algo?.items) return
+      algo.items.forEach((item) => {
+        const text = (item.text ?? '').trim()
+        if (!text) return
+        const key = text.toLowerCase()
+        if (!map.has(key)) {
+          map.set(key, { label: item.label, score: item.score })
+        }
+      })
+    })
+    return map
+  }, [selectedAlgorithmKey, selectedCompareGroup])
+
   /* --- Handlers --- */
   function closeLeftPanel() {
     setIsLeftPanelOpen(false)
@@ -539,7 +593,7 @@ export default function App() {
     setError(null)
     closeLeftPanel()
     if (activeChannels.length < 2) {
-      setError('En az 2 kanal girmen gerekiyor.')
+      setError(t('dashboard:errors.needMinChannels'))
       return
     }
     setIsMatching(true)
@@ -550,8 +604,10 @@ export default function App() {
       const response = await runMatch({ channels: activeChannels, tweets_per_channel: Number(tweetsPerChannel) || 10, min_channels_for_match: Number(minChannelsForMatch) || 2 })
       setMatchResult(response)
       setCurrentRunId(response.run_id ?? null)
+      setLastRunAtIso(new Date().toISOString())
+      setCurrentRunChannels(activeChannels)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Eşleştirme sırasında beklenmeyen hata oldu.')
+      setError(requestError instanceof Error ? requestError.message : t('dashboard:errors.matchUnexpected'))
     } finally {
       setIsMatching(false)
     }
@@ -561,7 +617,7 @@ export default function App() {
     setError(null)
     closeLeftPanel()
     if (!matchResult?.matched_groups?.length) {
-      setError('Önce tweetleri çekip eşleşmeleri bulman gerekiyor.')
+      setError(t('dashboard:errors.repliesNeedMatchFirst'))
       return
     }
     setIsFetchingReplies(true)
@@ -576,8 +632,9 @@ export default function App() {
       })
       setRepliesResult(response)
       setCompareResult(null)
+      setLastRunAtIso((prev) => prev ?? new Date().toISOString())
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Yorum çekme sırasında beklenmeyen hata oldu.')
+      setError(requestError instanceof Error ? requestError.message : t('dashboard:errors.repliesUnexpected'))
     } finally {
       setIsFetchingReplies(false)
     }
@@ -587,7 +644,7 @@ export default function App() {
     setError(null)
     closeLeftPanel()
     if (!repliesResult?.matched_groups?.length) {
-      setError('Duygu karşılaştırması için önce yorumları çekmelisin.')
+      setError(t('dashboard:errors.sentimentNeedRepliesFirst'))
       return
     }
     setIsComparingSentiment(true)
@@ -600,7 +657,7 @@ export default function App() {
       })
       setCompareResult(response)
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Duygu karşılaştırması sırasında beklenmeyen hata oldu.')
+      setError(requestError instanceof Error ? requestError.message : t('dashboard:errors.sentimentUnexpected'))
     } finally {
       setIsComparingSentiment(false)
     }
@@ -613,7 +670,7 @@ export default function App() {
       const response = await listRuns()
       setArchiveRuns(response.runs)
     } catch (e) {
-      setArchiveError(e instanceof Error ? e.message : 'Arşiv listesi alınamadı.')
+      setArchiveError(e instanceof Error ? e.message : t('dashboard:errors.archiveListFailed'))
     } finally {
       setArchiveLoading(false)
     }
@@ -678,19 +735,21 @@ export default function App() {
         setCompareResult(null)
       }
       setCurrentRunId(detail.run_id)
+      setLastRunAtIso(detail.updated_at || detail.created_at || new Date().toISOString())
+      setCurrentRunChannels(detail.channels ?? [])
       setSelectedGroupIndex(0)
       setExpandedReplies({})
       setError(null)
       setCurrentView('dashboard')
     } catch (e) {
-      setArchiveError(e instanceof Error ? e.message : 'Arşiv kaydı yüklenemedi.')
+      setArchiveError(e instanceof Error ? e.message : t('dashboard:errors.archiveRunLoadFailed'))
     } finally {
       setArchiveOpeningId(null)
     }
   }
 
   async function removeArchiveRun(runId: string) {
-    if (!window.confirm('Bu arşiv kaydını silmek istediğine emin misin?')) return
+    if (!window.confirm(t('common:confirm.deleteRun'))) return
     setArchiveDeletingId(runId)
     setArchiveError(null)
     try {
@@ -701,9 +760,10 @@ export default function App() {
         setRepliesResult(null)
         setCompareResult(null)
         setCurrentRunId(null)
+        setCurrentRunChannels(null)
       }
     } catch (e) {
-      setArchiveError(e instanceof Error ? e.message : 'Arşiv kaydı silinemedi.')
+      setArchiveError(e instanceof Error ? e.message : t('dashboard:errors.archiveRunDeleteFailed'))
     } finally {
       setArchiveDeletingId(null)
     }
@@ -734,7 +794,39 @@ export default function App() {
     window.localStorage.setItem('rightPanelWidthPx', String(rightPanelWidthPx))
   }, [rightPanelWidthPx])
 
+  function dismissOnboarding() {
+    setOnboardingDismissed(true)
+    try {
+      window.localStorage.setItem('onboardingDismissed', 'true')
+    } catch {
+      // ignore
+    }
+  }
+
+  function openChannelSettings() {
+    setIsLeftPanelOpen(true)
+    window.setTimeout(() => {
+      const el = document.getElementById('channel-management')
+      el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    }, 50)
+  }
+
+  useEffect(() => {
+    setSelectedTweetIndex(0)
+  }, [selectedGroup?.topic])
+
   /* ========== RENDER ========== */
+
+  const lastRunLabel = useMemo(() => {
+    if (!currentRunId || !lastRunAtIso) return t('dashboard:status.none')
+    const dt = new Date(lastRunAtIso)
+    const locale = getIntlLocaleTag((i18n.language as any) || 'tr')
+    const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(dt)
+    const channelCount = currentRunChannels?.length ?? activeChannels.length
+    const groupCount = matchResult?.matched_groups?.length ?? 0
+    const replyCount = repliesResult?.total_replies ?? 0
+    return `${t('dashboard:status.lastRun')}: ${time} • ${t('dashboard:status.channels', { count: channelCount })} • ${t('dashboard:status.groups', { count: groupCount })} • ${t('dashboard:status.replies', { count: replyCount })}`
+  }, [activeChannels.length, currentRunChannels?.length, currentRunId, lastRunAtIso, matchResult?.matched_groups?.length, repliesResult?.total_replies, t])
 
   return (
     <div
@@ -769,7 +861,7 @@ export default function App() {
         </button>
         <button
           className={`nav-item${currentView === 'archive' ? ' active' : ''}`}
-          title="Arşiv"
+          title={t('dashboard:nav.archive')}
           id="nav-archive"
           type="button"
           onClick={showArchiveView}
@@ -799,7 +891,7 @@ export default function App() {
 
         <button
           className={`nav-item${isLeftPanelOpen ? ' active' : ''}`}
-          title={isLeftPanelOpen ? 'Ayarları kapat' : 'Ayarlar'}
+          title={isLeftPanelOpen ? t('dashboard:nav.settingsClose') : t('dashboard:nav.settings')}
           id="nav-settings"
           type="button"
           onClick={toggleLeftPanel}
@@ -823,13 +915,13 @@ export default function App() {
       {/* ===== 2. Left Panel (Settings + Channels) ===== */}
       <aside className="left-panel" id="left-panel">
         <div className="left-panel-header">
-          <h1>Haber Analiz</h1>
+          <h1>{t('settings:title')}</h1>
           <button
             type="button"
             className="left-panel-close"
             onClick={closeLeftPanel}
-            aria-label="Ayarlar panelini kapat"
-            title="Kapat"
+            aria-label={t('common:close')}
+            title={t('common:close')}
           >
             <span className="icon">close</span>
           </button>
@@ -839,19 +931,19 @@ export default function App() {
         <section className="left-panel-section" id="api-settings">
           <div className="section-label">
             <span className="icon">key</span>
-            API Ayarları
+            {t('settings:apiSettings')}
           </div>
           <div className="settings-grid">
             <div className="setting-field">
-              <label htmlFor="auth-token-input">Auth Token</label>
+              <label htmlFor="auth-token-input">{t('settings:fields.authToken')}</label>
               <input id="auth-token-input" type="password" value={twitterAuthToken} onChange={(e) => setTwitterAuthToken(e.target.value)} placeholder="auth_token" />
             </div>
             <div className="setting-field">
-              <label htmlFor="ct0-input">ct0</label>
+              <label htmlFor="ct0-input">{t('settings:fields.ct0')}</label>
               <input id="ct0-input" type="password" value={twitterCt0} onChange={(e) => setTwitterCt0(e.target.value)} placeholder="ct0" />
             </div>
             <div className="setting-field">
-              <label htmlFor="bearer-input">Bearer Token</label>
+              <label htmlFor="bearer-input">{t('settings:fields.bearerToken')}</label>
               <input id="bearer-input" type="password" value={twitterBearerToken} onChange={(e) => setTwitterBearerToken(e.target.value)} placeholder="Bearer ..." />
             </div>
           </div>
@@ -861,19 +953,19 @@ export default function App() {
         <section className="left-panel-section" id="numeric-settings">
           <div className="section-label">
             <span className="icon">tune</span>
-            Parametreler
+            {t('settings:parameters')}
           </div>
           <div className="numeric-settings">
             <div className="numeric-field">
-              <label>Tweet / Kanal</label>
+              <label>{t('settings:fields.tweetsPerChannel')}</label>
               <input type="number" min={1} max={50} value={tweetsPerChannel} onChange={(e) => setTweetsPerChannel(e.target.value === '' ? '' : Number(e.target.value))} />
             </div>
             <div className="numeric-field">
-              <label>Ortak Eşik</label>
+              <label>{t('settings:fields.minCommonThreshold')}</label>
               <input type="number" min={2} max={10} value={minChannelsForMatch} onChange={(e) => setMinChannelsForMatch(e.target.value === '' ? '' : Number(e.target.value))} />
             </div>
             <div className="numeric-field">
-              <label>Yorum / Tweet</label>
+              <label>{t('settings:fields.repliesPerTweet')}</label>
               <input type="number" min={1} max={100} value={replyCount} onChange={(e) => setReplyCount(e.target.value === '' ? '' : Number(e.target.value))} />
             </div>
           </div>
@@ -883,7 +975,7 @@ export default function App() {
         <section className="left-panel-section" id="channel-management">
           <div className="section-label">
             <span className="icon">group</span>
-            Kanal Yönetimi
+            {t('settings:channelManagement')}
           </div>
           <div className="channel-list">
             {channels.map((channel, index) => {
@@ -901,7 +993,7 @@ export default function App() {
                       className="channel-info"
                       onClick={() => setEditingChannelIndex(index)}
                       style={{ cursor: 'pointer' }}
-                      title="Düzenlemek için tıklayın"
+                      title={t('settings:fields.clickToEdit')}
                     >
                       <span className="channel-name">{displayName}</span>
                       <span className="channel-handle">@{displayName}</span>
@@ -914,7 +1006,7 @@ export default function App() {
                       onChange={(e) => updateChannel(index, e.target.value)}
                       onBlur={() => setEditingChannelIndex(null)}
                       autoFocus={isEditing}
-                      placeholder="kullanıcı adı veya link"
+                      placeholder={t('settings:fields.channelPlaceholder')}
                       aria-label={`Kanal ${index + 1}`}
                     />
                   )}
@@ -923,7 +1015,7 @@ export default function App() {
                     type="button"
                     onClick={() => removeChannel(index)}
                     disabled={channels.length <= 2}
-                    title={channels.length <= 2 ? 'En az 2 kanal gerekli' : 'Kanalı sil'}
+                    title={channels.length <= 2 ? t('settings:fields.minTwoChannels') : t('settings:fields.deleteChannel')}
                     aria-label={`Kanal ${index + 1} sil`}
                   >
                     <span className="icon">close</span>
@@ -933,10 +1025,17 @@ export default function App() {
             })}
             <button className="add-channel-btn" type="button" onClick={addChannel} id="add-channel-btn">
               <span className="icon">add</span>
-              Kanal Ekle
+              {t('settings:fields.addChannel')}
             </button>
           </div>
         </section>
+
+        <AppearanceSettings
+          t={t}
+          themeMode={themeMode}
+          setThemeMode={setThemeMode}
+          locale={(i18n.language as SupportedLocale) || 'tr'}
+        />
       </aside>
 
       {/* ===== 3. Center Feed (Grouped News or Archive) ===== */}
@@ -945,7 +1044,7 @@ export default function App() {
           <>
             <div className="feed-header">
               <h2>
-                Arşiv
+                {t('dashboard:nav.archive')}
                 {archiveRuns.length > 0 && <span className="feed-header-count">({archiveRuns.length})</span>}
               </h2>
               <div className="feed-header-tools">
@@ -953,10 +1052,10 @@ export default function App() {
                   <span className="icon">search</span>
                   <input
                     type="text"
-                    placeholder="Arşivde kanal / ID ara..."
+                    placeholder={t('dashboard:feed.archiveSearchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    aria-label="Arşiv arama"
+                    aria-label={`${t('common:search')} (${t('dashboard:nav.archive')})`}
                   />
                 </div>
               <button
@@ -969,12 +1068,12 @@ export default function App() {
                 {archiveLoading ? (
                   <>
                     <span className="spinner" />
-                    Yükleniyor...
+                    {t('common:loading')}
                   </>
                 ) : (
                   <>
                     <span className="icon">refresh</span>
-                    Yenile
+                    {t('common:refresh')}
                   </>
                 )}
               </button>
@@ -997,8 +1096,8 @@ export default function App() {
                   <span className="icon icon-lg" aria-hidden="true">
                     inventory_2
                   </span>
-                    <h3>Arşiv boş</h3>
-                    <p>Henüz kayıtlı analiz yok. Dashboard'dan tweet çekince otomatik olarak buraya kaydedilir.</p>
+                    <h3>{t('dashboard:feed.archiveEmptyTitle')}</h3>
+                    <p>{t('dashboard:feed.archiveEmptyBody')}</p>
                   </div>
                 ) : (
                   archiveRuns
@@ -1035,12 +1134,12 @@ export default function App() {
                             {run.has_sentiment ? (
                               <span className="archive-flag flag-on">
                                 <span className="icon">insights</span>
-                                Duygu analizli
+                                {t('dashboard:archive.flags.sentimentOn')}
                               </span>
                             ) : (
                               <span className="archive-flag flag-off">
                                 <span className="icon">insights</span>
-                                Analiz yapılmamış
+                                {t('dashboard:archive.flags.sentimentOff')}
                               </span>
                             )}
                           </div>
@@ -1049,7 +1148,7 @@ export default function App() {
                         <div className="archive-card-channels">
                           {run.channels.map((ch) => (
                             <span className="source-badge" key={`${run.run_id}-${ch}`}>
-                              <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                              <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
                               @{ch}
                             </span>
                           ))}
@@ -1077,12 +1176,12 @@ export default function App() {
                             {isOpening ? (
                               <>
                                 <span className="spinner" />
-                                Açılıyor...
+                                {t('common:opening')}
                               </>
                             ) : (
                               <>
                                 <span className="icon">open_in_new</span>
-                                Aç
+                                {t('dashboard:archive.open')}
                               </>
                             )}
                           </button>
@@ -1091,7 +1190,7 @@ export default function App() {
                             type="button"
                             onClick={() => removeArchiveRun(run.run_id)}
                             disabled={isDeleting}
-                            title="Bu kaydı sil"
+                            title={t('dashboard:archive.deleteTitle')}
                           >
                             {isDeleting ? <span className="spinner" /> : <span className="icon">delete</span>}
                           </button>
@@ -1106,21 +1205,21 @@ export default function App() {
         ) : currentView === 'analytics' ? (
           <>
             <div className="feed-header">
-              <h2>Analiz Raporları</h2>
+              <h2>{t('dashboard:reports.title')}</h2>
               <div className="feed-header-tools">
                 <div className="feed-search">
                   <span className="icon">search</span>
                   <input
                     type="text"
-                    placeholder="Raporlarda kanal / ID ara..."
+                    placeholder={t('dashboard:feed.reportsSearchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    aria-label="Rapor arama"
+                    aria-label={`${t('common:search')} (${t('dashboard:reports.title')})`}
                   />
                 </div>
                 <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
                   {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
-                  Yenile
+                  {t('common:refresh')}
                 </button>
               </div>
             </div>
@@ -1132,27 +1231,27 @@ export default function App() {
                   <div className="summary-stat-row" style={{ marginBottom: '20px' }}>
                     <div className="summary-stat-card">
                       <span className="stat-value">{archiveRuns.length}</span>
-                      <span className="stat-label">Toplam İşlem</span>
+                      <span className="stat-label">{t('dashboard:reports.totalRuns')}</span>
                     </div>
                     <div className="summary-stat-card">
                       <span className="stat-value">{archiveRuns.reduce((acc, r) => acc + r.total_groups, 0)}</span>
-                      <span className="stat-label">Toplam Grup</span>
+                      <span className="stat-label">{t('dashboard:reports.totalGroups')}</span>
                     </div>
                     <div className="summary-stat-card">
                       <span className="stat-value">{archiveRuns.reduce((acc, r) => acc + r.total_replies, 0)}</span>
-                      <span className="stat-label">Toplam Yorum</span>
+                      <span className="stat-label">{t('dashboard:reports.totalReplies')}</span>
                     </div>
                   </div>
-                  <h3>Tüm Kanallar</h3>
+                  <h3>{t('dashboard:reports.allChannels')}</h3>
                   <div className="archive-card-channels" style={{ marginBottom: '20px' }}>
                     {Array.from(new Set(archiveRuns.flatMap((r) => r.channels))).map((ch) => (
                       <span className="source-badge" key={ch}>
-                        <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                        <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
                         @{ch}
                       </span>
                     ))}
                   </div>
-                  <h3 style={{ margin: '0 0 10px' }}>İşlem Geçmişi</h3>
+                  <h3 style={{ margin: '0 0 10px' }}>{t('dashboard:reports.history')}</h3>
                   <div className="analytics-table">
                     <div className="analytics-table-header">
                       <div>Tarih</div>
@@ -1176,7 +1275,7 @@ export default function App() {
                           type="button"
                           className="analytics-table-row"
                           onClick={() => openArchiveRun(r.run_id)}
-                          title="Detayları aç"
+                          title={t('dashboard:reports.openDetails')}
                         >
                           <div>{formatRunTimestamp(r.created_at)}</div>
                           <div className="mono">{r.channels.join(', ')}</div>
@@ -1196,21 +1295,21 @@ export default function App() {
         ) : currentView === 'alerts' ? (
           <>
             <div className="feed-header">
-              <h2>Bildirimler</h2>
+              <h2>{t('dashboard:alerts.title')}</h2>
               <div className="feed-header-tools">
                 <div className="feed-search">
                   <span className="icon">search</span>
                   <input
                     type="text"
-                    placeholder="Bildirimlerde kanal / ID ara..."
+                    placeholder={t('dashboard:feed.alertsSearchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    aria-label="Bildirim arama"
+                    aria-label={`${t('common:search')} (${t('dashboard:alerts.title')})`}
                   />
                 </div>
                 <button className="fetch-btn" type="button" onClick={refreshArchiveList} disabled={archiveLoading}>
                   {archiveLoading ? <span className="spinner" /> : <span className="icon">refresh</span>}
-                  Yenile
+                  {t('common:refresh')}
                 </button>
               </div>
             </div>
@@ -1218,7 +1317,7 @@ export default function App() {
                {archiveLoading && archiveRuns.length === 0 ? (
                  <AlertsSkeleton />
                ) : archiveRuns.length === 0 ? (
-                 <div className="feed-empty">Bildirim yok.</div>
+                 <div className="feed-empty">{t('dashboard:alerts.empty')}</div>
                ) : (
                  archiveRuns
                    .filter((r) => {
@@ -1236,7 +1335,11 @@ export default function App() {
                        <strong style={{ color: 'var(--text-primary)' }}>{formatRunTimestamp(run.created_at)}</strong>
                      </div>
                      <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', paddingLeft: '34px' }}>
-                       <strong>{run.channels.join(', ')}</strong> kanallarında yapılan analizde <strong>{run.total_groups}</strong> ortak haber ve <strong>{run.total_replies}</strong> yorum bulundu.
+                       {t('dashboard:alerts.message', {
+                         channels: run.channels.join(', '),
+                         groups: run.total_groups,
+                         replies: run.total_replies,
+                       })}
                      </p>
                    </div>
                  ))
@@ -1247,18 +1350,22 @@ export default function App() {
           <>
         <div className="feed-header">
           <h2>
-            Gruplanmış Haberler
+            {t('dashboard:feed.groupedNews')}
             {shownGroups.length > 0 && <span className="feed-header-count">({shownGroups.length})</span>}
           </h2>
           <div className="feed-header-tools">
+            <div className="run-status-chip" title={lastRunLabel} aria-label={lastRunLabel}>
+              <span className="icon">schedule</span>
+              <span>{lastRunLabel}</span>
+            </div>
             <div className="feed-search">
               <span className="icon">search</span>
               <input
                 type="text"
-                placeholder="Haberlerde ara..."
+                placeholder={t('dashboard:feed.newsSearchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Haber arama"
+                aria-label={`${t('common:search')} (${t('dashboard:feed.groupedNews')})`}
               />
             </div>
           <button
@@ -1271,12 +1378,12 @@ export default function App() {
             {isMatching ? (
               <>
                 <span className="spinner" />
-                Çekiliyor...
+                {t('dashboard:feed.fetchingTweets')}
               </>
             ) : (
               <>
                 <span className="icon">download</span>
-                Tweetleri Çek
+                {t('dashboard:feed.fetchTweets')}
               </>
             )}
           </button>
@@ -1297,18 +1404,29 @@ export default function App() {
           {isRepliesReady && (repliesResult?.total_replies ?? 0) === 0 && (
             <div className="info-notice" id="no-replies-notice">
               <span className="icon">info</span>
-              <span>Yorum bulunamadı. Tweetlerde yorumlar kapalı olabilir veya auth bilgileri eksik/geçersiz olabilir.</span>
+              <span>{t('dashboard:info.noRepliesFound')}</span>
             </div>
           )}
 
           {shownGroups.length === 0 ? (
-            <div className="feed-empty" id="feed-empty">
-              <span className="icon icon-lg" aria-hidden="true">
-                newspaper
-              </span>
-              <h3>Henüz eşleşme yok</h3>
-              <p>Kanalları ayarlayın ve "Tweetleri Çek" butonuna tıklayarak haber gruplarını oluşturun.</p>
-            </div>
+            <>
+              <div id="feed-empty">
+                {!onboardingDismissed && (
+                  <OnboardingCard
+                    t={t}
+                    onDismiss={dismissOnboarding}
+                    onOpenSettings={openChannelSettings}
+                    onFetchTweets={handleFetchMatches}
+                    isFetching={isMatching}
+                  />
+                )}
+              </div>
+              <EmptyState
+                icon="newspaper"
+                title={t('dashboard:feed.emptyTitle')}
+                body={t('dashboard:feed.emptyBody')}
+              />
+            </>
           ) : (
             shownGroups.map((group, groupIndex) => {
               const isActive = groupIndex === selectedGroupIndexSafe
@@ -1331,7 +1449,7 @@ export default function App() {
                       <div className="group-source-badges">
                         {group.channels.map((ch) => (
                           <span className="source-badge" key={ch}>
-                            <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                            <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
                             @{ch}
                           </span>
                         ))}
@@ -1351,100 +1469,172 @@ export default function App() {
 
                   {/* Split View — expanded when active */}
                   {isActive && (
-                    <div className={`split-view${group.tweets.length === 1 ? ' split-view-single' : ''}`} id="split-view">
-                      {group.tweets.map((tweet, idx) => (
-                        <article className="split-tweet" key={`${group.topic}-${idx}`}>
-                          <div className="tweet-author">
-                            <div className="tweet-author-avatar">
-                              {renderTweetLabel(tweet, idx).replace('@', '').slice(0, 1).toUpperCase()}
-                            </div>
-                            <div className="tweet-author-info">
-                              <span className="tweet-author-name">{renderTweetLabel(tweet, idx)}</span>
-                              <span className="tweet-author-handle">
-                                {tweet.channel ? `@${tweet.channel}` : ''}
-                              </span>
-                            </div>
-                            <span className="tweet-author-time">{tweet.date_formatted || '-'}</span>
-                          </div>
-                          <p className="tweet-text">{tweet.text ?? '-'}</p>
-                          <div className="tweet-engagement">
-                            <span className="tweet-metric">
-                              <span className="icon">favorite</span>
-                              <strong>{formatMetricValue(tweet.likes)}</strong>
-                            </span>
-                            <span className="tweet-metric">
-                              <span className="icon">chat_bubble_outline</span>
-                              <strong>{formatMetricValue(tweet.replies)}</strong>
-                            </span>
-                            <span className="tweet-metric">
-                              <span className="icon">repeat</span>
-                              <strong>{formatMetricValue(tweet.retweets)}</strong>
-                            </span>
-                          </div>
-                          {tweet.url && (
-                            <a className="tweet-link-external" href={tweet.url} target="_blank" rel="noreferrer">
-                              <span className="icon">open_in_new</span>
-                              X'te aç
-                            </a>
-                          )}
+                    (() => {
+                      const safeIndex = Math.max(0, Math.min(selectedTweetIndex, group.tweets.length - 1))
+                      const tweet = group.tweets[safeIndex]
+                      if (!tweet) return null
 
-                          {(() => {
-                            const channelKey = String(tweet.channel ?? '')
-                            const repliesForChannel = group.replies_by_channel?.[channelKey] ?? []
-                            const repliesKey = buildReplyKey(group.topic, idx)
-                            const isOpen = expandedReplies[repliesKey]
-                            const replyCount = repliesForChannel.length
+                      const allReplies = Object.entries(group.replies_by_channel ?? {}).flatMap(([sourceChannel, replies]) =>
+                        (replies ?? []).map((r) => ({ ...r, __sourceChannel: sourceChannel })),
+                      )
+                      const repliesKey = `${group.topic}::all`
+                      const isOpen = expandedReplies[repliesKey]
+                      const replyCount = allReplies.length
+                      const sortedReplies = [...allReplies].sort((a: any, b: any) => {
+                        if (commentSortMode === 'top') {
+                          return Number(b.likes ?? 0) - Number(a.likes ?? 0)
+                        }
+                        const da = Date.parse(String(a.date ?? ''))
+                        const db = Date.parse(String(b.date ?? ''))
+                        if (Number.isFinite(db) && Number.isFinite(da)) return db - da
+                        return 0
+                      })
 
-                            return (
-                              <div className="tweet-replies" id={`tweet-replies-${groupIndex}-${idx}`}>
+                      const filteredReplies = sortedReplies.filter((r: any) => {
+                        if (commentSentimentFilter === 'all') return true
+                        const key = String(r.text ?? '').trim().toLowerCase()
+                        const hit = sentimentByText?.get(key)
+                        const label = (hit?.label ?? '').toLowerCase()
+                        return label === commentSentimentFilter
+                      })
+
+                      return (
+                        <div className="tweet-focus" id="tweet-focus">
+                          <div className="tweet-tabs" role="tablist" aria-label="Channels">
+                            {group.tweets.map((tw, idx) => {
+                              const ch = tw.channel ? `@${tw.channel}` : `#${idx + 1}`
+                              const active = idx === safeIndex
+                              return (
                                 <button
-                                  className="tweet-replies-toggle"
+                                  key={`${group.topic}-tab-${idx}-${ch}`}
                                   type="button"
-                                  onClick={() => toggleReplies(group.topic, idx)}
-                                  disabled={replyCount === 0}
+                                  className={`tweet-tab${active ? ' active' : ''}`}
+                                  role="tab"
+                                  aria-selected={active}
+                                  onClick={() => setSelectedTweetIndex(idx)}
                                 >
-                                  <span className="icon">forum</span>
-                                  {replyCount === 0 ? 'Yorum yok' : isOpen ? `Yorumlari gizle (${replyCount})` : `Yorumlari goster (${replyCount})`}
-                                  <span className={`icon reply-caret${isOpen ? ' open' : ''}`}>expand_more</span>
+                                  <ChannelAvatar channel={ch} className="tweet-tab-avatar" size={24} />
+                                  <span className="tweet-tab-label">{ch}</span>
                                 </button>
+                              )
+                            })}
+                          </div>
 
-                                {isOpen && replyCount > 0 && (
-                                  <div className="tweet-replies-list">
-                                    {repliesForChannel.map((reply, replyIndex) => (
-                                      <article className="reply-card" key={`${group.topic}-${idx}-${replyIndex}`}>
-                                        <div className="reply-header">
-                                          <div className="reply-avatar">{(reply.user || reply.name || '?').slice(0, 1).toUpperCase()}</div>
-                                          <div className="reply-user">
-                                            <span className="reply-name">{reply.name || 'Kullanici'}</span>
-                                            <span className="reply-handle">@{reply.user || '-'}</span>
-                                          </div>
-                                          <span className="reply-time">{formatDateLabel(reply.date)}</span>
-                                        </div>
-                                        <p className="reply-text">{reply.text || '-'}</p>
-                                        <div className="reply-metrics">
-                                          <span className="reply-metric">
-                                            <span className="icon">favorite</span>
-                                            {formatMetricValue(reply.likes)}
-                                          </span>
-                                          <span className="reply-metric">
-                                            <span className="icon">chat_bubble_outline</span>
-                                            {formatMetricValue(reply.replies)}
-                                          </span>
-                                          <span className="reply-metric">
-                                            <span className="icon">repeat</span>
-                                            {formatMetricValue(reply.retweets)}
-                                          </span>
-                                        </div>
-                                      </article>
-                                    ))}
-                                  </div>
-                                )}
+                          <article className="split-tweet">
+                            <div className="tweet-author">
+                              <div className="tweet-author-avatar">
+                                {(tweet.channel || '?').replace('@', '').slice(0, 1).toUpperCase()}
                               </div>
-                            )
-                          })()}
-                        </article>
-                      ))}
-                    </div>
+                              <div className="tweet-author-info">
+                                <span className="tweet-author-name">{tweet.channel ? `@${tweet.channel}` : renderTweetLabel(tweet, safeIndex)}</span>
+                                <span className="tweet-author-handle">{tweet.channel ? `@${tweet.channel}` : ''}</span>
+                              </div>
+                              <span className="tweet-author-time">{tweet.date_formatted || '-'}</span>
+                            </div>
+
+                            <p className="tweet-text">{tweet.text ?? '-'}</p>
+
+                            <div className="tweet-media" aria-hidden="true">
+                              <div className="tweet-media-placeholder">
+                                <span className="icon">image</span>
+                              </div>
+                            </div>
+
+                            <div className="tweet-engagement">
+                              <Metric icon="favorite" value={formatMetricValue(tweet.likes)} />
+                              <Metric icon="chat_bubble_outline" value={formatMetricValue(tweet.replies)} />
+                              <Metric icon="repeat" value={formatMetricValue(tweet.retweets)} />
+                            </div>
+
+                            {tweet.url && (
+                              <a className="tweet-link-external" href={tweet.url} target="_blank" rel="noreferrer">
+                                <span className="icon">open_in_new</span>
+                                {t('dashboard:tweet.openOnX')}
+                              </a>
+                            )}
+
+                            <div className="tweet-replies" id={`tweet-replies-${groupIndex}-${safeIndex}`}>
+                              <button
+                                className="tweet-replies-toggle"
+                                type="button"
+                                onClick={() => {
+                                  setExpandedReplies((prev) => ({ ...prev, [repliesKey]: !prev[repliesKey] }))
+                                }}
+                                disabled={replyCount === 0}
+                              >
+                                <span className="icon">forum</span>
+                                {replyCount === 0
+                                  ? t('dashboard:tweet.noComments')
+                                  : isOpen
+                                    ? t('dashboard:tweet.hideComments', { count: replyCount })
+                                    : t('dashboard:tweet.showComments', { count: replyCount })}
+                                <span className={`icon reply-caret${isOpen ? ' open' : ''}`}>expand_more</span>
+                              </button>
+
+                              {isOpen && replyCount > 0 && (
+                                <div className="tweet-replies-list">
+                                  <div className="reply-filters">
+                                    <SegmentedControl<'newest' | 'top'>
+                                      value={commentSortMode}
+                                      onChange={setCommentSortMode}
+                                      ariaLabel="Sort comments"
+                                      options={[
+                                        { value: 'newest', label: t('dashboard:comments.sort.newest') },
+                                        { value: 'top', label: t('dashboard:comments.sort.top') },
+                                      ]}
+                                    />
+                                    {compareResult && (
+                                      <SegmentedControl<'all' | 'positive' | 'negative' | 'neutral'>
+                                        value={commentSentimentFilter}
+                                        onChange={setCommentSentimentFilter}
+                                        ariaLabel="Filter comments"
+                                        options={[
+                                          { value: 'all', label: t('dashboard:comments.sentiment.all') },
+                                          { value: 'positive', label: t('dashboard:comments.sentiment.positive') },
+                                          { value: 'negative', label: t('dashboard:comments.sentiment.negative') },
+                                          { value: 'neutral', label: t('dashboard:comments.sentiment.neutral') },
+                                        ]}
+                                      />
+                                    )}
+                                  </div>
+
+                                  {filteredReplies.map((reply, replyIndex) => (
+                                    <article className="reply-card" key={`${group.topic}-all-${replyIndex}`}>
+                                      <div className="reply-header">
+                                        <div className="reply-avatar">{(reply.user || reply.name || '?').slice(0, 1).toUpperCase()}</div>
+                                        <div className="reply-user">
+                                          <span className="reply-name">{reply.name || t('common:unknown')}</span>
+                                          <span className="reply-handle">@{reply.user || '-'}</span>
+                                        </div>
+                                        <span className="reply-time">{formatDateLabel(reply.date)}</span>
+                                      </div>
+                                      <div className="reply-source-row">
+                                        <span className="reply-source-badge">@{(reply as any).__sourceChannel ?? '-'}</span>
+                                      </div>
+                                      <p className="reply-text">{reply.text || '-'}</p>
+                                      <div className="reply-metrics">
+                                        <span className="reply-metric">
+                                          <span className="icon">favorite</span>
+                                          {formatMetricValue(reply.likes)}
+                                        </span>
+                                        <span className="reply-metric">
+                                          <span className="icon">chat_bubble_outline</span>
+                                          {formatMetricValue(reply.replies)}
+                                        </span>
+                                        <span className="reply-metric">
+                                          <span className="icon">repeat</span>
+                                          {formatMetricValue(reply.retweets)}
+                                        </span>
+                                      </div>
+                                    </article>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </article>
+                        </div>
+                      )
+                    })()
                   )}
                 </div>
               )
@@ -1462,7 +1652,7 @@ export default function App() {
           className="splitter"
           role="separator"
           aria-orientation="vertical"
-          aria-label="Panel boyutlandırıcı"
+          aria-label={t('analysis:resizeHandleLabel')}
           onPointerDown={startResizeRightPanel}
         />
       )}
@@ -1470,27 +1660,27 @@ export default function App() {
       {/* ===== 4. Right Panel (Dynamic Analysis) ===== */}
       <aside className="right-panel" id="right-panel">
         <div className="right-panel-header">
-          <h2>Analiz Paneli</h2>
+          <h2>{t('analysis:panelTitle')}</h2>
           <button
             type="button"
             className="right-panel-collapse"
             onClick={toggleRightPanel}
-            aria-label={isRightPanelOpen ? 'Analiz panelini kapat' : 'Analiz panelini aç'}
-            title={isRightPanelOpen ? 'Kapat' : 'Aç'}
+            aria-label={isRightPanelOpen ? t('analysis:closePanel') : t('analysis:openPanel')}
+            title={isRightPanelOpen ? t('common:close') : t('common:open')}
           >
             <span className="icon">{isRightPanelOpen ? 'chevron_right' : 'chevron_left'}</span>
           </button>
         </div>
 
         {(isFetchingReplies || isComparingSentiment) && selectedGroup ? (
-          <RightPanelSkeleton title={isFetchingReplies ? 'Yorumlar' : 'Duygu karşılaştırma'} />
+          <RightPanelSkeleton title={isFetchingReplies ? t('analysis:commentsShort') : t('analysis:sentimentCompareShort')} />
         ) : !selectedGroup ? (
           <div className="analysis-empty" id="analysis-empty">
             <span className="icon icon-lg" aria-hidden="true">
               analytics
             </span>
-            <h3>Grup Seçin</h3>
-            <p>Analiz sonuçlarını görmek için sol panelden bir haber grubu seçin.</p>
+            <h3>{t('analysis:selectGroupTitle')}</h3>
+            <p>{t('analysis:selectGroupBody')}</p>
           </div>
         ) : (
           <>
@@ -1500,7 +1690,7 @@ export default function App() {
               <div className="summary-channels">
                 {selectedGroup.channels.map((ch) => (
                   <span className="source-badge" key={ch}>
-                    <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                    <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
                     @{ch}
                   </span>
                 ))}
@@ -1547,12 +1737,12 @@ export default function App() {
                 {isFetchingReplies ? (
                   <>
                     <span className="spinner" />
-                    Yorumlar Çekiliyor...
+                    {t('analysis:pullingComments')}
                   </>
                 ) : (
                   <>
                     <span className="icon">cloud_download</span>
-                    Analiz İçin Yorumları Çek
+                    {t('analysis:pullComments')}
                   </>
                 )}
               </button>
@@ -1573,12 +1763,12 @@ export default function App() {
                     {isComparingSentiment ? (
                       <>
                         <span className="spinner" />
-                        Karşılaştırılıyor...
+                        {t('analysis:comparingSentiment')}
                       </>
                     ) : (
                       <>
                         <span className="icon">compare_arrows</span>
-                        Duygu Karşılaştır
+                        {t('analysis:compareSentiment')}
                       </>
                     )}
                   </button>
@@ -1588,112 +1778,24 @@ export default function App() {
                   <section className="sentiment-dashboard" id="sentiment-dashboard">
                     <div className="sentiment-header">
                       <span className="icon">insights</span>
-                      <h3>Duygu Analizi Sonuçları</h3>
+                      <h3>{t('analysis:sentimentResults')}</h3>
                     </div>
 
-                    <div className="sentiment-grid">
-                      {ALGORITHM_ORDER.map((algo) => {
-                        const totals = algorithmTotals[algo.key]
-                        const words = wordCloudByAlgorithm?.[algo.key] ?? []
-                        const engineLabel = totals?.engine ?? algo.fallbackEngine
-                        if (!totals || totals.total === 0) {
-                          return (
-                            <div className="sentiment-panel" key={`sentiment-${algo.key}`}>
-                              <div className="sentiment-panel-header">
-                                <div className="sentiment-panel-title">
-                                  <span className="icon">psychology</span>
-                                  <h4>{algo.title}</h4>
-                                </div>
-                                <span className="sentiment-engine">{engineLabel}</span>
-                              </div>
-                              <div className="sentiment-empty">Bu algoritma icin sonuc bulunamadi.</div>
-                            </div>
-                          )
-                        }
-
-                        return (
-                          <div className="sentiment-panel" key={`sentiment-${algo.key}`}>
-                            <div className="sentiment-panel-header">
-                              <div className="sentiment-panel-title">
-                                <span className="icon">psychology</span>
-                                <h4>{algo.title}</h4>
-                              </div>
-                              <span className="sentiment-engine">{engineLabel}</span>
-                            </div>
-
-                            <DoughnutChart positive={totals.positive} negative={totals.negative} neutral={totals.neutral} />
-
-                            <div className="sentiment-bars">
-                              <div className="sentiment-bar-row">
-                                <div className="sentiment-bar-label">
-                                  <span>Pozitif</span>
-                                  <span>{totals.positive} ({totals.total > 0 ? Math.round((totals.positive / totals.total) * 100) : 0}%)</span>
-                                </div>
-                                <div className="sentiment-bar-track">
-                                  <div className="sentiment-bar-fill" style={{ width: `${totals.total > 0 ? (totals.positive / totals.total) * 100 : 0}%`, background: 'var(--positive)' }} />
-                                </div>
-                              </div>
-                              <div className="sentiment-bar-row">
-                                <div className="sentiment-bar-label">
-                                  <span>Negatif</span>
-                                  <span>{totals.negative} ({totals.total > 0 ? Math.round((totals.negative / totals.total) * 100) : 0}%)</span>
-                                </div>
-                                <div className="sentiment-bar-track">
-                                  <div className="sentiment-bar-fill" style={{ width: `${totals.total > 0 ? (totals.negative / totals.total) * 100 : 0}%`, background: 'var(--negative)' }} />
-                                </div>
-                              </div>
-                              <div className="sentiment-bar-row">
-                                <div className="sentiment-bar-label">
-                                  <span>Nötr</span>
-                                  <span>{totals.neutral} ({totals.total > 0 ? Math.round((totals.neutral / totals.total) * 100) : 0}%)</span>
-                                </div>
-                                <div className="sentiment-bar-track">
-                                  <div className="sentiment-bar-fill" style={{ width: `${totals.total > 0 ? (totals.neutral / totals.total) * 100 : 0}%`, background: 'var(--neutral)' }} />
-                                </div>
-                              </div>
-                            </div>
-
-                            <WordCloud words={words} />
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Channel Comparison */}
-                    <div className="channel-comparison" id="channel-comparison">
-                      <div className="comparison-title">
-                        <span className="icon">compare</span>
-                        Kanal Karşılaştırma
-                      </div>
-                      <div className="comparison-cards">
-                        {Object.entries(selectedCompareGroup.channel_results).map(([channel, result]) => (
-                          <div className="comparison-card" key={`${selectedCompareGroup.topic}-${channel}`}>
-                            <div className="comparison-card-header">
-                              <span className="comparison-channel-name">
-                                <span className="icon">person</span>
-                                @{channel}
-                              </span>
-                              <span className="comparison-best-algo">🏆 {result.best_algorithm}</span>
-                            </div>
-                            <div className="comparison-algo-row">
-                              {Object.entries(result.algorithms).map(([name, algo]) => (
-                                <span className="algo-chip" key={`${channel}-${name}`}>
-                                  <span className="algo-chip-name">{name}</span>
-                                  <span className="algo-chip-dominant">{algo.summary.dominant}</span>
-                                  <span className="algo-chip-total">({algo.summary.total})</span>
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <SentimentDashboard
+                      t={t}
+                      algorithmOrder={ALGORITHM_ORDER}
+                      selectedAlgorithmKey={selectedAlgorithmKey}
+                      setSelectedAlgorithmKey={setSelectedAlgorithmKey}
+                      algorithmTotals={algorithmTotals}
+                      wordCloudByAlgorithm={wordCloudByAlgorithm}
+                      selectedCompareGroup={selectedCompareGroup}
+                    />
 
                     {/* Save notice */}
                     {compareResult.saved_file && (
                       <div className="save-notice" id="save-notice">
                         <span className="icon">check_circle</span>
-                        JSON kaydı: {compareResult.saved_file}
+                        {t('analysis:jsonSaved', { path: compareResult.saved_file })}
                       </div>
                     )}
                   </section>
@@ -1709,8 +1811,8 @@ export default function App() {
           type="button"
           className="right-panel-handle"
           onClick={toggleRightPanel}
-          aria-label="Analiz panelini aç"
-          title="Analiz panelini aç"
+          aria-label={t('analysis:openPanel')}
+          title={t('analysis:openPanel')}
         >
           <span className="icon">chevron_left</span>
         </button>

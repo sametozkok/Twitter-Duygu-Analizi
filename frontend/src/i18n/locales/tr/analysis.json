@@ -1,0 +1,33 @@
+{
+  "panelTitle": "Analiz Paneli",
+  "resizeHandleLabel": "Panel boyutlandırıcı",
+  "openPanel": "Analiz panelini aç",
+  "closePanel": "Analiz panelini kapat",
+  "selectGroupTitle": "Grup Seçin",
+  "selectGroupBody": "Analiz sonuçlarını görmek için sol panelden bir haber grubu seçin.",
+  "sentimentTitle": "Duygu Analizi",
+  "pullComments": "Analiz İçin Yorumları Çek",
+  "pullingComments": "Yorumlar Çekiliyor...",
+  "compareSentiment": "Duygu Karşılaştır",
+  "comparingSentiment": "Karşılaştırılıyor...",
+  "sentimentResults": "Duygu Analizi Sonuçları",
+  "commentsShort": "Yorumlar",
+  "sentimentCompareShort": "Duygu karşılaştırma",
+  "wordCloud": "Kelime Bulutu",
+  "channelComparison": "Kanal Karşılaştırma",
+  "jsonSaved": "JSON kaydı: {{path}}",
+  "noResultForAlgorithm": "Bu algoritma için sonuç bulunamadı.",
+  "locked": {
+    "title": "Duygu Analizi"
+  },
+  "sentiments": {
+    "positive": "Pozitif",
+    "negative": "Negatif",
+    "neutral": "Nötr"
+  },
+  "algorithm": {
+    "bert": "BERT",
+    "api": "Gemini API"
+  }
+}
+

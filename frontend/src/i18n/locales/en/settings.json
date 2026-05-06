@@ -1,0 +1,32 @@
+{
+  "title": "News Analysis",
+  "apiSettings": "API Settings",
+  "parameters": "Parameters",
+  "channelManagement": "Channel Management",
+  "display": "Appearance",
+  "language": "Language",
+  "theme": "Theme",
+  "themeModes": {
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System"
+  },
+  "languageModes": {
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "fields": {
+    "authToken": "Auth Token",
+    "ct0": "ct0",
+    "bearerToken": "Bearer Token",
+    "tweetsPerChannel": "Tweets / Channel",
+    "minCommonThreshold": "Match Threshold",
+    "repliesPerTweet": "Replies / Tweet",
+    "channelPlaceholder": "username or link",
+    "addChannel": "Add Channel",
+    "minTwoChannels": "At least 2 channels required",
+    "deleteChannel": "Delete channel",
+    "clickToEdit": "Click to edit"
+  }
+}
+
