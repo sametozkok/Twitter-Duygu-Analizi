@@ -33,6 +33,7 @@ class RepliesRequest(BaseModel):
     twitter_auth_token: str = ""
     twitter_ct0: str = ""
     twitter_bearer_token: str = ""
+    run_id: str | None = None
 
 
 class AnalysisResponse(BaseModel):
@@ -40,12 +41,14 @@ class AnalysisResponse(BaseModel):
     total_groups: int
     total_replies: int
     status: str
+    run_id: str | None = None
 
 
 class MatchResponse(BaseModel):
     matched_groups: list[AnalysisGroup]
     total_groups: int
     status: str
+    run_id: str | None = None
 
 
 class RepliesResponse(BaseModel):
@@ -53,12 +56,14 @@ class RepliesResponse(BaseModel):
     total_groups: int
     total_replies: int
     status: str
+    run_id: str | None = None
 
 
 class SentimentCompareRequest(BaseModel):
     matched_groups: list[AnalysisGroup]
     algorithms: list[str] = Field(default_factory=lambda: ["bert", "hybrid"])
     save_to_json: bool = True
+    run_id: str | None = None
 
 
 class SentimentCompareGroupResult(BaseModel):
@@ -72,6 +77,36 @@ class SentimentCompareResponse(BaseModel):
     total_groups: int
     status: str
     saved_file: str | None = None
+    run_id: str | None = None
+
+
+class RunSummary(BaseModel):
+    run_id: str
+    created_at: str
+    updated_at: str
+    channels: list[str]
+    total_groups: int
+    total_replies: int
+    has_replies: bool
+    has_sentiment: bool
+
+
+class RunListResponse(BaseModel):
+    runs: list[RunSummary]
+    total: int
+
+
+class RunDetail(BaseModel):
+    run_id: str
+    created_at: str
+    updated_at: str
+    channels: list[str]
+    matched_groups: list[AnalysisGroup]
+    total_groups: int
+    total_replies: int
+    has_replies: bool
+    has_sentiment: bool
+    sentiment_compare: dict | None = None
 
 
 class DualModelCompareRequest(BaseModel):

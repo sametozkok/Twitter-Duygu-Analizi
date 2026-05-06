@@ -42,6 +42,7 @@ export type MatchResponse = {
   matched_groups: AnalysisGroup[]
   total_groups: number
   status: string
+  run_id?: string | null
 }
 
 export type RepliesRequest = {
@@ -50,6 +51,7 @@ export type RepliesRequest = {
   twitter_auth_token: string
   twitter_ct0: string
   twitter_bearer_token: string
+  run_id?: string | null
 }
 
 export type RepliesResponse = {
@@ -57,12 +59,14 @@ export type RepliesResponse = {
   total_groups: number
   total_replies: number
   status: string
+  run_id?: string | null
 }
 
 export type SentimentCompareRequest = {
   matched_groups: AnalysisGroup[]
   algorithms: string[]
   save_to_json?: boolean
+  run_id?: string | null
 }
 
 export type SentimentSummary = {
@@ -101,4 +105,37 @@ export type SentimentCompareResponse = {
   total_groups: number
   status: string
   saved_file?: string | null
+  run_id?: string | null
+}
+
+export type RunSummary = {
+  run_id: string
+  created_at: string
+  updated_at: string
+  channels: string[]
+  total_groups: number
+  total_replies: number
+  has_replies: boolean
+  has_sentiment: boolean
+}
+
+export type RunListResponse = {
+  runs: RunSummary[]
+  total: number
+}
+
+export type RunDetail = {
+  run_id: string
+  created_at: string
+  updated_at: string
+  channels: string[]
+  matched_groups: AnalysisGroup[]
+  total_groups: number
+  total_replies: number
+  has_replies: boolean
+  has_sentiment: boolean
+  sentiment_compare: {
+    algorithms: string[]
+    compared_groups: SentimentCompareGroup[]
+  } | null
 }

@@ -1,6 +1,12 @@
-import { useMemo, useState } from 'react'
-import { runMatch, runReplies, runSentimentCompare } from './lib/api'
-import type { MatchResponse, RepliesResponse, SentimentCompareResponse, TweetItem } from './types'
+import { useEffect, useMemo, useState } from 'react'
+import { deleteRun, getRun, listRuns, runMatch, runReplies, runSentimentCompare } from './lib/api'
+import type {
+  MatchResponse,
+  RepliesResponse,
+  RunSummary,
+  SentimentCompareResponse,
+  TweetItem,
+} from './types'
 
 /* ========== Helpers ========== */
 
@@ -27,6 +33,19 @@ function formatDateLabel(value?: string) {
   // API returns UTC, add 3 hours for Turkey (UTC+3)
   const corrected = new Date(parsed + 3 * 60 * 60 * 1000)
   return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(corrected)
+}
+
+function formatRunTimestamp(value?: string) {
+  if (!value) return '-'
+  const parsed = Date.parse(value)
+  if (Number.isNaN(parsed)) return value
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(parsed))
 }
 
 function buildReplyKey(topic: string, tweetIndex: number) {
@@ -166,6 +185,14 @@ export default function App() {
   const [editingChannelIndex, setEditingChannelIndex] = useState<number | null>(null)
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
 
+  const [currentView, setCurrentView] = useState<'dashboard' | 'archive'>('dashboard')
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null)
+  const [archiveRuns, setArchiveRuns] = useState<RunSummary[]>([])
+  const [archiveLoading, setArchiveLoading] = useState(false)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+  const [archiveOpeningId, setArchiveOpeningId] = useState<string | null>(null)
+  const [archiveDeletingId, setArchiveDeletingId] = useState<string | null>(null)
+
   const activeChannels = useMemo(
     () => channels.map((item) => item.trim()).filter((item) => item.length > 0),
     [channels],
@@ -274,9 +301,11 @@ export default function App() {
     setIsMatching(true)
     setRepliesResult(null)
     setCompareResult(null)
+    setCurrentRunId(null)
     try {
       const response = await runMatch({ channels: activeChannels, tweets_per_channel: Number(tweetsPerChannel) || 10, min_channels_for_match: Number(minChannelsForMatch) || 2 })
       setMatchResult(response)
+      setCurrentRunId(response.run_id ?? null)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Eşleştirme sırasında beklenmeyen hata oldu.')
     } finally {
@@ -298,6 +327,7 @@ export default function App() {
         twitter_auth_token: twitterAuthToken.trim(),
         twitter_ct0: twitterCt0.trim(),
         twitter_bearer_token: twitterBearerToken.trim(),
+        run_id: currentRunId,
       })
       setRepliesResult(response)
       setCompareResult(null)
@@ -316,7 +346,12 @@ export default function App() {
     }
     setIsComparingSentiment(true)
     try {
-      const response = await runSentimentCompare({ matched_groups: repliesResult.matched_groups, algorithms: ['bert', 'api'], save_to_json: true })
+      const response = await runSentimentCompare({
+        matched_groups: repliesResult.matched_groups,
+        algorithms: ['bert', 'api'],
+        save_to_json: true,
+        run_id: currentRunId,
+      })
       setCompareResult(response)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Duygu karşılaştırması sırasında beklenmeyen hata oldu.')
@@ -324,6 +359,101 @@ export default function App() {
       setIsComparingSentiment(false)
     }
   }
+
+  async function refreshArchiveList() {
+    setArchiveLoading(true)
+    setArchiveError(null)
+    try {
+      const response = await listRuns()
+      setArchiveRuns(response.runs)
+    } catch (e) {
+      setArchiveError(e instanceof Error ? e.message : 'Arşiv listesi alınamadı.')
+    } finally {
+      setArchiveLoading(false)
+    }
+  }
+
+  function showDashboardView() {
+    setCurrentView('dashboard')
+  }
+
+  async function showArchiveView() {
+    setCurrentView('archive')
+    await refreshArchiveList()
+  }
+
+  async function openArchiveRun(runId: string) {
+    setArchiveOpeningId(runId)
+    setArchiveError(null)
+    try {
+      const detail = await getRun(runId)
+      const matched = detail.matched_groups
+      setMatchResult({
+        matched_groups: matched,
+        total_groups: detail.total_groups,
+        status: 'archived',
+        run_id: detail.run_id,
+      })
+      if (detail.has_replies) {
+        setRepliesResult({
+          matched_groups: matched,
+          total_groups: detail.total_groups,
+          total_replies: detail.total_replies,
+          status: 'archived',
+          run_id: detail.run_id,
+        })
+      } else {
+        setRepliesResult(null)
+      }
+      if (detail.has_sentiment && detail.sentiment_compare) {
+        setCompareResult({
+          compared_groups: detail.sentiment_compare.compared_groups,
+          total_groups: detail.sentiment_compare.compared_groups.length,
+          status: 'archived',
+          saved_file: null,
+          run_id: detail.run_id,
+        })
+      } else {
+        setCompareResult(null)
+      }
+      setCurrentRunId(detail.run_id)
+      setSelectedGroupIndex(0)
+      setExpandedReplies({})
+      setError(null)
+      setCurrentView('dashboard')
+    } catch (e) {
+      setArchiveError(e instanceof Error ? e.message : 'Arşiv kaydı yüklenemedi.')
+    } finally {
+      setArchiveOpeningId(null)
+    }
+  }
+
+  async function removeArchiveRun(runId: string) {
+    if (!window.confirm('Bu arşiv kaydını silmek istediğine emin misin?')) return
+    setArchiveDeletingId(runId)
+    setArchiveError(null)
+    try {
+      await deleteRun(runId)
+      setArchiveRuns((prev) => prev.filter((r) => r.run_id !== runId))
+      if (currentRunId === runId) {
+        setMatchResult(null)
+        setRepliesResult(null)
+        setCompareResult(null)
+        setCurrentRunId(null)
+      }
+    } catch (e) {
+      setArchiveError(e instanceof Error ? e.message : 'Arşiv kaydı silinemedi.')
+    } finally {
+      setArchiveDeletingId(null)
+    }
+  }
+
+  useEffect(() => {
+    if (currentView === 'archive' && archiveRuns.length === 0 && !archiveLoading) {
+      refreshArchiveList()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView])
 
   /* ========== RENDER ========== */
 
@@ -335,8 +465,23 @@ export default function App() {
           <XLogo />
         </button>
 
-        <button className="nav-item active" title="Dashboard" id="nav-dashboard">
+        <button
+          className={`nav-item${currentView === 'dashboard' ? ' active' : ''}`}
+          title="Dashboard"
+          id="nav-dashboard"
+          type="button"
+          onClick={showDashboardView}
+        >
           <span className="icon">dashboard</span>
+        </button>
+        <button
+          className={`nav-item${currentView === 'archive' ? ' active' : ''}`}
+          title="Arşiv"
+          id="nav-archive"
+          type="button"
+          onClick={showArchiveView}
+        >
+          <span className="icon">history</span>
         </button>
         <button className="nav-item" title="Raporlar" id="nav-reports">
           <span className="icon">assessment</span>
@@ -465,8 +610,145 @@ export default function App() {
         </section>
       </aside>
 
-      {/* ===== 3. Center Feed (Grouped News) ===== */}
+      {/* ===== 3. Center Feed (Grouped News or Archive) ===== */}
       <main className="center-feed" id="center-feed">
+        {currentView === 'archive' ? (
+          <>
+            <div className="feed-header">
+              <h2>
+                Arşiv
+                {archiveRuns.length > 0 && <span className="feed-header-count">({archiveRuns.length})</span>}
+              </h2>
+              <button
+                className="fetch-btn"
+                type="button"
+                onClick={refreshArchiveList}
+                disabled={archiveLoading}
+                id="archive-refresh-btn"
+              >
+                {archiveLoading ? (
+                  <>
+                    <span className="spinner" />
+                    Yükleniyor...
+                  </>
+                ) : (
+                  <>
+                    <span className="icon">refresh</span>
+                    Yenile
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="feed-content">
+              {archiveError && (
+                <div className="error-banner" role="alert">
+                  <span className="icon">error</span>
+                  <span>{archiveError}</span>
+                </div>
+              )}
+
+              {!archiveLoading && archiveRuns.length === 0 && !archiveError ? (
+                <div className="feed-empty">
+                  <span className="icon">inventory_2</span>
+                  <h3>Arşiv boş</h3>
+                  <p>Henüz kayıtlı analiz yok. Dashboard'dan tweet çekince otomatik olarak buraya kaydedilir.</p>
+                </div>
+              ) : (
+                archiveRuns.map((run) => {
+                  const isOpening = archiveOpeningId === run.run_id
+                  const isDeleting = archiveDeletingId === run.run_id
+                  return (
+                    <article className="archive-card" key={run.run_id} id={`archive-card-${run.run_id}`}>
+                      <div className="archive-card-header">
+                        <div className="archive-card-title">
+                          <span className="icon">schedule</span>
+                          <span>{formatRunTimestamp(run.created_at)}</span>
+                        </div>
+                        <div className="archive-card-flags">
+                          {run.has_replies ? (
+                            <span className="archive-flag flag-on">
+                              <span className="icon">forum</span>
+                              Yorumlar
+                            </span>
+                          ) : (
+                            <span className="archive-flag flag-off">
+                              <span className="icon">forum</span>
+                              Yorum yok
+                            </span>
+                          )}
+                          {run.has_sentiment ? (
+                            <span className="archive-flag flag-on">
+                              <span className="icon">insights</span>
+                              Duygu analizli
+                            </span>
+                          ) : (
+                            <span className="archive-flag flag-off">
+                              <span className="icon">insights</span>
+                              Analiz yapılmamış
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="archive-card-channels">
+                        {run.channels.map((ch) => (
+                          <span className="source-badge" key={`${run.run_id}-${ch}`}>
+                            <span className="source-badge-avatar">{ch.replace('@', '').slice(0, 1).toUpperCase()}</span>
+                            @{ch}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="archive-card-stats">
+                        <span className="group-stat">
+                          <span className="icon">group_work</span>
+                          {run.total_groups} grup
+                        </span>
+                        <span className="group-stat">
+                          <span className="icon">forum</span>
+                          {run.total_replies} yorum
+                        </span>
+                        <span className="archive-card-id">ID: {run.run_id}</span>
+                      </div>
+
+                      <div className="archive-card-actions">
+                        <button
+                          className="fetch-btn"
+                          type="button"
+                          onClick={() => openArchiveRun(run.run_id)}
+                          disabled={isOpening}
+                        >
+                          {isOpening ? (
+                            <>
+                              <span className="spinner" />
+                              Açılıyor...
+                            </>
+                          ) : (
+                            <>
+                              <span className="icon">open_in_new</span>
+                              Aç
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="archive-delete-btn"
+                          type="button"
+                          onClick={() => removeArchiveRun(run.run_id)}
+                          disabled={isDeleting}
+                          title="Bu kaydı sil"
+                        >
+                          {isDeleting ? <span className="spinner" /> : <span className="icon">delete</span>}
+                        </button>
+                      </div>
+                    </article>
+                  )
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          <>
         <div className="feed-header">
           <h2>
             Gruplanmış Haberler
@@ -656,6 +938,8 @@ export default function App() {
             })
           )}
         </div>
+          </>
+        )}
       </main>
 
       {/* ===== 4. Right Panel (Dynamic Analysis) ===== */}

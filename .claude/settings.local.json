@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"C:\\\\Users\\\\meric\\\\.claude\\\\projects\\\\c--SAM-Twitter-Duygu-Analizi\\\\memory\\\\\" 2>&1 || echo \"EMPTY_OR_MISSING\")",
+      "Read(//c/Users/meric/.claude/projects/c--SAM-Twitter-Duygu-Analizi/**)"
+    ]
+  }
+}

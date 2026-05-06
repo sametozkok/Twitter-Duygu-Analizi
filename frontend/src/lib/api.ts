@@ -3,6 +3,8 @@ import type {
   MatchResponse,
   RepliesRequest,
   RepliesResponse,
+  RunDetail,
+  RunListResponse,
   SentimentCompareRequest,
   SentimentCompareResponse,
 } from '../types'
@@ -92,4 +94,32 @@ export async function runSentimentCompare(payload: SentimentCompareRequest): Pro
   }
 
   return response.json() as Promise<SentimentCompareResponse>
+}
+
+export async function listRuns(): Promise<RunListResponse> {
+  const response = await fetchJson(`${API_BASE_URL}/api/runs`)
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(body || `Run listesi alinamadi (status ${response.status})`)
+  }
+  return response.json() as Promise<RunListResponse>
+}
+
+export async function getRun(runId: string): Promise<RunDetail> {
+  const response = await fetchJson(`${API_BASE_URL}/api/runs/${encodeURIComponent(runId)}`)
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(body || `Run detayi alinamadi (status ${response.status})`)
+  }
+  return response.json() as Promise<RunDetail>
+}
+
+export async function deleteRun(runId: string): Promise<void> {
+  const response = await fetchJson(`${API_BASE_URL}/api/runs/${encodeURIComponent(runId)}`, {
+    method: 'DELETE',
+  })
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(body || `Run silinemedi (status ${response.status})`)
+  }
 }

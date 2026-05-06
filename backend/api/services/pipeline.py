@@ -20,6 +20,11 @@ from backend.preprocess.text_cleaner import prepare_replies
 from backend.scraper.replies import fetch_tweet_replies
 from backend.scraper.tweets import fetch_multiple_channels
 from backend.storage.json_store import save_snapshot
+from backend.storage.run_store import (
+    create_run,
+    update_run_replies,
+    update_run_sentiment,
+)
 from config import GEMINI_API_KEY
 
 
@@ -46,10 +51,16 @@ def run_match_pipeline(request: MatchRequest) -> MatchResponse:
             )
         )
 
+    run_id = create_run(
+        channels=request.channels,
+        matched_groups=[item.model_dump() for item in group_results],
+    )
+
     return MatchResponse(
         matched_groups=group_results,
         total_groups=len(group_results),
         status="ok",
+        run_id=run_id,
     )
 
 
@@ -106,16 +117,15 @@ def run_replies_pipeline(request: RepliesRequest) -> RepliesResponse:
         total_groups=len(group_results),
         total_replies=total_replies,
         status="ok",
+        run_id=request.run_id,
     )
 
-    save_snapshot(
-        "replies",
-        {
-            "total_groups": response.total_groups,
-            "total_replies": response.total_replies,
-            "matched_groups": [item.model_dump() for item in response.matched_groups],
-        },
-    )
+    if request.run_id:
+        update_run_replies(
+            request.run_id,
+            [item.model_dump() for item in response.matched_groups],
+            response.total_replies,
+        )
 
     return response
 
@@ -154,11 +164,19 @@ def run_sentiment_compare_pipeline(request: SentimentCompareRequest) -> Sentimen
         }
         saved_file = save_snapshot("sentiment_compare", snapshot_payload)
 
+    if request.run_id:
+        update_run_sentiment(
+            request.run_id,
+            [item.model_dump() for item in compared_groups],
+            request.algorithms,
+        )
+
     return SentimentCompareResponse(
         compared_groups=compared_groups,
         total_groups=len(compared_groups),
         status="ok",
         saved_file=saved_file,
+        run_id=request.run_id,
     )
 
 
@@ -201,6 +219,7 @@ def run_analysis_pipeline(request: AnalysisRequest) -> AnalysisResponse:
             twitter_auth_token=request.twitter_auth_token,
             twitter_ct0=request.twitter_ct0,
             twitter_bearer_token=request.twitter_bearer_token,
+            run_id=match_result.run_id,
         )
     )
 
@@ -209,4 +228,5 @@ def run_analysis_pipeline(request: AnalysisRequest) -> AnalysisResponse:
         total_groups=replies_result.total_groups,
         total_replies=replies_result.total_replies,
         status=replies_result.status,
+        run_id=match_result.run_id,
     )
