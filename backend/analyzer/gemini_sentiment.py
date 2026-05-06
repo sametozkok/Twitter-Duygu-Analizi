@@ -2,7 +2,14 @@ import json
 import re
 import requests
 import time
-from config import GEMINI_API_KEY
+from config import (
+    GEMINI_API_DISABLED,
+    GEMINI_API_KEY,
+    GROK_API_BASE,
+    GROK_API_KEY,
+    GROK_MODEL,
+    LLM_PROVIDER,
+)
 
 GEMINI_MODELS = [
     "gemini-2.5-flash",
@@ -60,28 +67,96 @@ def _parse_gemini_json(raw_text: str) -> list:
     except Exception:
         return []
 
-def bulk_analyze_sentiment_with_gemini(replies: list[dict]) -> dict[str, tuple[str, float]]:
+
+def _resolve_provider() -> str:
+    if LLM_PROVIDER in {"grok", "groq"}:
+        return "grok" if GROK_API_KEY else "none"
+    if LLM_PROVIDER == "gemini":
+        if GEMINI_API_DISABLED or not GEMINI_API_KEY:
+            return "none"
+        return "gemini"
+    if GROK_API_KEY:
+        return "grok"
+    if GEMINI_API_DISABLED or not GEMINI_API_KEY:
+        return "none"
+    return "gemini"
+
+
+def _call_grok(prompt: str, system_instruction: str, max_tokens: int) -> str | None:
+    if not GROK_API_KEY:
+        return None
+
+    base_url = GROK_API_BASE.rstrip("/")
+    api_url = f"{base_url}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROK_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": GROK_MODEL,
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.0,
+        "top_p": 0.7,
+        "max_tokens": max_tokens,
+    }
+
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                api_url,
+                headers=headers,
+                json=payload,
+                timeout=45,
+            )
+        except requests.RequestException:
+            last_error = "request-error"
+            time.sleep(1 + attempt)
+            continue
+
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError, ValueError):
+                last_error = "invalid-response"
+                break
+
+        if response.status_code in (429, 503):
+            last_error = str(response.status_code)
+            time.sleep(2 + attempt)
+            continue
+
+        last_error = str(response.status_code)
+        break
+
+    if last_error is not None:
+        print(f"Grok API Error: {last_error}")
+    return None
+
+def bulk_analyze_sentiment_with_gemini(replies: list[dict]) -> dict[int, tuple[str, float]]:
     """
     Returns a mapping of reply ID/index to (label, score).
     """
-    if not GEMINI_API_KEY or not replies:
+    if not replies:
         return {}
 
-    prompt_lines = []
-    # Create a mapping to easily assign results back
-    mapping = {}
+    provider = _resolve_provider()
+    if provider == "none":
+        return {}
+
+    all_prompt_lines = []
     for i, reply in enumerate(replies):
         raw_text = _raw_for_api(str(reply.get("text") or reply.get("clean_text") or ""))
         if not raw_text or len(raw_text) < 2:
             continue
-        prompt_lines.append(f"{i}|{raw_text}")
-        mapping[i] = reply
+        all_prompt_lines.append(f"{i}|{raw_text}")
 
-    if not prompt_lines:
+    if not all_prompt_lines:
         return {}
-
-    # Gemini has limits, if we have too many, we might need to batch, but for ~20-50 replies, it's fine.
-    tweet_block = "\n".join(prompt_lines)
 
     system_instruction = (
         "Sen bir duygu analizi motorusun. Sana verilen metinlerin (yorumların) duygusunu analiz et. "
@@ -89,8 +164,17 @@ def bulk_analyze_sentiment_with_gemini(replies: list[dict]) -> dict[str, tuple[s
         "Her metni 'positive', 'negative' veya 'neutral' olarak sınıflandır. "
         "Confidence skoru (0.0 ile 1.0 arası) belirle."
     )
+    headers = {"Content-Type": "application/json"}
 
-    prompt = f"""Aşağıda {len(prompt_lines)} adet yorum var (ID|metin formatında).
+    result_map = {}
+    
+    # Process in chunks of 100 to avoid confusing the model and hitting limits
+    chunk_size = 100
+    for chunk_start in range(0, len(all_prompt_lines), chunk_size):
+        prompt_lines = all_prompt_lines[chunk_start:chunk_start + chunk_size]
+        tweet_block = "\n".join(prompt_lines)
+
+        prompt = f"""Aşağıda {len(prompt_lines)} adet yorum var (ID|metin formatında).
 Her bir yorumun duygu analizini yap ve JSON array olarak döndür.
 
 Veri:
@@ -102,65 +186,89 @@ Veri:
 [{{"id": 0, "label": "positive|negative|neutral", "score": 0.95}}]
 """
 
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "systemInstruction": {
-            "parts": [{"text": system_instruction}]
-        },
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.0,
-            "topP": 0.7,
-            "maxOutputTokens": 4096,
-            "responseMimeType": "application/json",
+        payload = {
+            "systemInstruction": {
+                "parts": [{"text": system_instruction}]
+            },
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.0,
+                "topP": 0.7,
+                "maxOutputTokens": 8192,
+                "responseMimeType": "application/json",
+            }
         }
-    }
 
-    response = None
-    for model in GEMINI_MODELS:
-        api_url = GEMINI_API_BASE.format(model=model)
-        for attempt in range(2):
-            try:
-                response = requests.post(
-                    f"{api_url}?key={GEMINI_API_KEY}",
-                    headers=headers,
-                    json=payload,
-                    timeout=30,
-                )
-            except requests.RequestException:
-                response = None
-                if attempt == 0:
-                    time.sleep(1)
+        if provider == "grok":
+            grok_text = _call_grok(prompt, system_instruction, max_tokens=4096)
+            if not grok_text:
+                return {}
+            parsed_results = _parse_gemini_json(grok_text)
+
+            for item in parsed_results:
+                idx = item.get("id")
+                if idx is not None:
+                    label = str(item.get("label", "neutral")).lower()
+                    if label not in ("positive", "negative", "neutral"):
+                        label = "neutral"
+                    score = float(item.get("score", 0.5))
+                    result_map[idx] = (label, score)
+            continue
+
+        response = None
+        rate_limited = False
+        for model in GEMINI_MODELS:
+            api_url = GEMINI_API_BASE.format(model=model)
+            for attempt in range(3):
+                try:
+                    response = requests.post(
+                        f"{api_url}?key={GEMINI_API_KEY}",
+                        headers=headers,
+                        json=payload,
+                        timeout=45,
+                    )
+                except requests.RequestException:
+                    response = None
+                    time.sleep(1 + attempt)
                     continue
+                if response is not None and response.status_code == 200:
+                    break
+                if response is not None and response.status_code in (429, 503):
+                    rate_limited = True
+                    break
+                if response is not None and response.status_code == 404:
+                    break
                 break
-            if response.status_code == 200:
+            if rate_limited:
                 break
-            if response.status_code == 429:
-                time.sleep(2)
-                continue
-            break
-        if response is not None and response.status_code == 200:
-            break
+            if response is not None and response.status_code == 200:
+                break
 
-    if response is None or response.status_code != 200:
-        return {}
+        if rate_limited or response is None or response.status_code != 200:
+            status_code = response.status_code if response else "No Response"
+            print(f"Gemini API Error ({model}): Status Code: {status_code}")
+            if response is not None:
+                print(f"Response Text: {response.text}")
+            return {}
 
-    try:
-        resp_data = response.json()
-        text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception:
-        return {}
+        try:
+            resp_data = response.json()
+            text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            print(f"Gemini API Parsing Error from JSON structure: {e}")
+            if response is not None:
+                print(f"Raw JSON: {response.text}")
+            return {}
 
-    parsed_results = _parse_gemini_json(text)
-    
-    result_map = {}
-    for item in parsed_results:
-        idx = item.get("id")
-        if idx is not None:
-            label = str(item.get("label", "neutral")).lower()
-            if label not in ("positive", "negative", "neutral"):
-                label = "neutral"
-            score = float(item.get("score", 0.5))
-            result_map[idx] = (label, score)
+        parsed_results = _parse_gemini_json(text)
+        
+        for item in parsed_results:
+            idx = item.get("id")
+            if idx is not None:
+                label = str(item.get("label", "neutral")).lower()
+                if label not in ("positive", "negative", "neutral"):
+                    label = "neutral"
+                score = float(item.get("score", 0.5))
+                result_map[idx] = (label, score)
 
     return result_map

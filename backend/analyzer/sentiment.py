@@ -183,3 +183,45 @@ def get_sentiment_backend_name() -> str:
     """Return active engine for sentiment analysis in current runtime."""
 
     return "bert-model" if _get_pipeline() is not None else "fallback-rule"
+
+
+def analyze_sentiment_bulk(texts: list[str]) -> list[dict]:
+    """Analyze a list of texts using batch processing and return list of label/score dicts."""
+    if not texts:
+        return []
+
+    pipe = _get_pipeline()
+    if pipe is None:
+        return [_fallback_rule_sentiment(text) for text in texts]
+
+    cleaned_texts = [text[:512] for text in texts]
+    results = []
+    
+    try:
+        batch_results = pipe(cleaned_texts, batch_size=16)
+        
+        for result in batch_results:
+            raw_label = str(result.get("label", "")).lower()
+            score = round(float(result.get("score", 0.0)), 4)
+
+            if score < 0.60:
+                results.append({"label": "neutral", "score": score, "emoji": "N"})
+                continue
+
+            if "pos" in raw_label:
+                label = "positive"
+            elif "neg" in raw_label:
+                label = "negative"
+            else:
+                label = "neutral"
+
+            results.append({
+                "label": label,
+                "score": score,
+                "emoji": "+" if label == "positive" else "-" if label == "negative" else "N",
+            })
+            
+    except Exception:
+        return [_fallback_rule_sentiment(text) for text in texts]
+        
+    return results

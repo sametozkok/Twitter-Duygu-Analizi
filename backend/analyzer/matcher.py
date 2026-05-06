@@ -6,6 +6,14 @@ import json
 import re
 import requests
 import time
+from config import (
+    GEMINI_API_DISABLED,
+    GEMINI_API_KEY,
+    GROK_API_BASE,
+    GROK_API_KEY,
+    GROK_MODEL,
+    LLM_PROVIDER,
+)
 
 
 def _normalize_text(text: str) -> str:
@@ -413,6 +421,76 @@ GEMINI_MODELS = [
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 
+def _resolve_provider() -> str:
+    if LLM_PROVIDER in {"grok", "groq"}:
+        return "grok" if GROK_API_KEY else "none"
+    if LLM_PROVIDER == "gemini":
+        if GEMINI_API_DISABLED or not GEMINI_API_KEY:
+            return "none"
+        return "gemini"
+    if GROK_API_KEY:
+        return "grok"
+    if GEMINI_API_DISABLED or not GEMINI_API_KEY:
+        return "none"
+    return "gemini"
+
+
+def _call_grok(prompt: str, system_instruction: str, max_tokens: int) -> str | None:
+    if not GROK_API_KEY:
+        return None
+
+    base_url = GROK_API_BASE.rstrip("/")
+    api_url = f"{base_url}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROK_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": GROK_MODEL,
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.0,
+        "top_p": 0.7,
+        "max_tokens": max_tokens,
+    }
+
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                api_url,
+                headers=headers,
+                json=payload,
+                timeout=60,
+            )
+        except requests.RequestException:
+            last_error = "request-error"
+            time.sleep(1 + attempt)
+            continue
+
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+            except (KeyError, IndexError, TypeError, ValueError):
+                last_error = "invalid-response"
+                break
+
+        if response.status_code in (429, 503):
+            last_error = str(response.status_code)
+            time.sleep(2 + attempt)
+            continue
+
+        last_error = str(response.status_code)
+        break
+
+    if last_error is not None:
+        print(f"Grok API Error: {last_error}")
+    return None
+
+
 def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -> list[dict]:
     """Farklı kanallardan gelen tweetleri Gemini ile karşılaştırıp eşle.
     
@@ -448,6 +526,10 @@ def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -
     
     if not all_tweets:
         return []
+
+    provider = _resolve_provider()
+    if provider == "none":
+        return _fallback_match_by_keywords(all_tweets, min_channels)
     
     # 2) Aynı kanaldan gelen duplicate tweetleri ele
     all_tweets = _dedup_same_channel(all_tweets)
@@ -499,70 +581,81 @@ Veri:
 - confidence 0-1 arasında olmalı.
 - Eşleşme yoksa []"""
     
-    # 5) Gemini API çağrısı
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "systemInstruction": {
-            "parts": [{"text": system_instruction}]
-        },
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.0,
-            "topP": 0.7,
-            "maxOutputTokens": 4096,
-            "responseMimeType": "application/json",
+    if provider == "grok":
+        grok_text = _call_grok(prompt, system_instruction, max_tokens=4096)
+        if not grok_text:
+            return _fallback_match_by_keywords(all_tweets, min_channels)
+        matched_groups = _parse_gemini_json(grok_text)
+    else:
+        # 5) Gemini API çağrısı
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "systemInstruction": {
+                "parts": [{"text": system_instruction}]
+            },
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.0,
+                "topP": 0.7,
+                "maxOutputTokens": 4096,
+                "responseMimeType": "application/json",
+            }
         }
-    }
-    
-    response = None
-    for model in GEMINI_MODELS:
-        api_url = GEMINI_API_BASE.format(model=model)
+        
+        response = None
+        rate_limited = False
+        for model in GEMINI_MODELS:
+            api_url = GEMINI_API_BASE.format(model=model)
 
-        # Ağ kopmaları (RemoteDisconnected vb.) için model başına kısa retry uygula.
-        for attempt in range(2):
-            try:
-                response = requests.post(
-                    f"{api_url}?key={api_key}",
-                    headers=headers,
-                    json=payload,
-                    timeout=60,
-                )
-            except requests.RequestException:
-                response = None
-                if attempt == 0:
+            # Ağ kopmaları (RemoteDisconnected vb.) için model başına kısa retry uygula.
+            for attempt in range(3):
+                try:
+                    response = requests.post(
+                        f"{api_url}?key={api_key}",
+                        headers=headers,
+                        json=payload,
+                        timeout=60,
+                    )
+                except requests.RequestException:
+                    response = None
+                    time.sleep(1 + attempt)
+                    continue
+
+                if response.status_code == 200:
+                    break
+
+                if response.status_code in (429, 503):
+                    rate_limited = True
+                    break
+
+                if response.status_code >= 500:
                     time.sleep(1)
                     continue
+
+                if response.status_code == 404:
+                    break
+
                 break
 
-            if response.status_code == 200:
+            if rate_limited:
                 break
 
-            if response.status_code == 429:
-                time.sleep(2)
-                continue
+            if response is not None and response.status_code == 200:
+                break
 
-            if response.status_code >= 500:
-                time.sleep(1)
-                continue
-
-            break
-
-        if response is not None and response.status_code == 200:
-            break
-
-    # Gemini kotası (429) veya geçici API hatalarında akışı düşürme.
-    # Uygulama çalışmaya devam etsin diye keyword fallback'e geç.
-    if response is None or response.status_code != 200:
-        return _fallback_match_by_keywords(all_tweets, min_channels)
-    
-    # 6) Yanıtı parse et
-    try:
-        resp_data = response.json()
-        text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
-    except (ValueError, KeyError, IndexError, TypeError):
-        return _fallback_match_by_keywords(all_tweets, min_channels)
-    
-    matched_groups = _parse_gemini_json(text)
+        # Gemini kotası (429) veya geçici API hatalarında akışı düşürme.
+        # Uygulama çalışmaya devam etsin diye keyword fallback'e geç.
+        if rate_limited or response is None or response.status_code != 200:
+            return _fallback_match_by_keywords(all_tweets, min_channels)
+        
+        # 6) Yanıtı parse et
+        try:
+            resp_data = response.json()
+            text = resp_data["candidates"][0]["content"]["parts"][0]["text"]
+        except (ValueError, KeyError, IndexError, TypeError):
+            return _fallback_match_by_keywords(all_tweets, min_channels)
+        
+        matched_groups = _parse_gemini_json(text)
     
     if not matched_groups:
         return _fallback_match_by_keywords(all_tweets, min_channels)

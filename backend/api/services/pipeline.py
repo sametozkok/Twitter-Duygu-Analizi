@@ -124,14 +124,18 @@ def run_sentiment_compare_pipeline(request: SentimentCompareRequest) -> Sentimen
     compared_groups: list[SentimentCompareGroupResult] = []
 
     for group in request.matched_groups:
-        channel_results: dict[str, dict] = {}
+        prepared_replies_by_channel = {}
 
         for channel_name, replies in group.replies_by_channel.items():
             prepared = prepare_replies(replies)
-            if not prepared:
-                continue
+            if prepared:
+                prepared_replies_by_channel[channel_name] = prepared
 
-            channel_results[channel_name] = compare_replies(prepared, request.algorithms)
+        if prepared_replies_by_channel:
+            from backend.analyzer.sentiment_compare import compare_group_replies
+            channel_results = compare_group_replies(prepared_replies_by_channel, request.algorithms)
+        else:
+            channel_results = {}
 
         compared_groups.append(
             SentimentCompareGroupResult(

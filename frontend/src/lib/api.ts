@@ -7,12 +7,36 @@ import type {
   SentimentCompareResponse,
 } from '../types'
 
-const runtimeFallbackBaseUrl = `${window.location.protocol}//${window.location.hostname}:8000`
+function getApiBaseUrl(): string {
+  const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+  if (envBaseUrl) {
+    return envBaseUrl.replace(/\/+$/, '')
+  }
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? runtimeFallbackBaseUrl
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  if (isLocalHost) {
+    return `${window.location.protocol}//${window.location.hostname}:8000`
+  }
+
+  throw new Error(
+    'VITE_API_BASE_URL is not set. Configure it to your backend URL before using the app.',
+  )
+}
+
+export const API_BASE_URL = getApiBaseUrl()
+
+async function fetchJson(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init)
+  } catch {
+    throw new Error(
+      'Failed to fetch backend. Check VITE_API_BASE_URL, backend availability, and CORS settings.',
+    )
+  }
+}
 
 export async function getHealth() {
-  const response = await fetch(`${API_BASE_URL}/health`)
+  const response = await fetchJson(`${API_BASE_URL}/health`)
   if (!response.ok) {
     throw new Error('Health check failed')
   }
@@ -20,7 +44,7 @@ export async function getHealth() {
 }
 
 export async function runMatch(payload: MatchRequest): Promise<MatchResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/match`, {
+  const response = await fetchJson(`${API_BASE_URL}/api/match`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -37,7 +61,7 @@ export async function runMatch(payload: MatchRequest): Promise<MatchResponse> {
 }
 
 export async function runReplies(payload: RepliesRequest): Promise<RepliesResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/replies`, {
+  const response = await fetchJson(`${API_BASE_URL}/api/replies`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -54,7 +78,7 @@ export async function runReplies(payload: RepliesRequest): Promise<RepliesRespon
 }
 
 export async function runSentimentCompare(payload: SentimentCompareRequest): Promise<SentimentCompareResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/sentiment/compare`, {
+  const response = await fetchJson(`${API_BASE_URL}/api/sentiment/compare`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

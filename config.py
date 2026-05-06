@@ -7,6 +7,15 @@ load_dotenv(_env_path, override=True)
 
 # ─── Gemini API ───
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_API_DISABLED = os.getenv("GEMINI_API_DISABLED", "").strip().lower() in {"1", "true", "yes"}
+
+# ─── Groq/Grok API ───
+GROK_API_KEY = os.getenv("GROK_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
+GROK_API_BASE = os.getenv("GROK_API_BASE", "") or os.getenv("GROQ_API_BASE", "https://api.x.ai/v1")
+GROK_MODEL = os.getenv("GROK_MODEL", "") or os.getenv("GROQ_MODEL", "grok-2-latest")
+
+# ─── LLM Provider ───
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "").strip().lower()
 
 # ─── Twitter API ───
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
