@@ -187,6 +187,7 @@ export default function App() {
 
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(false)
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true)
+  const [rightPanelWidthPx, setRightPanelWidthPx] = useState<number>(520)
 
   const [currentView, setCurrentView] = useState<'dashboard' | 'archive' | 'analytics' | 'alerts'>('dashboard')
   const [searchQuery, setSearchQuery] = useState('')
@@ -298,6 +299,35 @@ export default function App() {
 
   function toggleRightPanel() {
     setIsRightPanelOpen((prev) => !prev)
+  }
+
+  function clampRightPanelWidth(nextWidth: number) {
+    const sidebarWidth = 72
+    const minRight = 320
+    const minCenter = 360
+    const available = Math.max(0, window.innerWidth - sidebarWidth)
+    const maxRight = Math.max(minRight, available - minCenter)
+    return Math.min(Math.max(nextWidth, minRight), maxRight)
+  }
+
+  function startResizeRightPanel(ev: React.PointerEvent<HTMLDivElement>) {
+    if (!isRightPanelOpen) return
+    ev.preventDefault()
+
+    const onMove = (e: PointerEvent) => {
+      const next = clampRightPanelWidth(window.innerWidth - e.clientX)
+      setRightPanelWidthPx(next)
+    }
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      document.body.classList.remove('is-resizing')
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp, { once: true })
+    document.body.classList.add('is-resizing')
   }
 
   function updateChannel(index: number, value: string) {
@@ -505,6 +535,24 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView])
 
+  useEffect(() => {
+    const saved = window.localStorage.getItem('rightPanelWidthPx')
+    const parsed = saved ? Number(saved) : NaN
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setRightPanelWidthPx(clampRightPanelWidth(parsed))
+      return
+    }
+    // Default to half of available space (best first impression)
+    const sidebarWidth = 72
+    const available = Math.max(0, window.innerWidth - sidebarWidth)
+    setRightPanelWidthPx(clampRightPanelWidth(Math.round(available / 2)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem('rightPanelWidthPx', String(rightPanelWidthPx))
+  }, [rightPanelWidthPx])
+
   /* ========== RENDER ========== */
 
   return (
@@ -516,6 +564,12 @@ export default function App() {
       ]
         .filter(Boolean)
         .join(' ')}
+      style={
+        {
+          // allow drag-resizing by overriding the CSS variable
+          ['--right-panel-width' as any]: `${rightPanelWidthPx}px`,
+        } as React.CSSProperties
+      }
     >
       {/* ===== 1. Nav Sidebar (Narrow Icon Bar) ===== */}
       <nav className="nav-sidebar" id="nav-sidebar">
@@ -1208,6 +1262,17 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Splitter between center and right panel */}
+      {isRightPanelOpen && (
+        <div
+          className="splitter"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Panel boyutlandırıcı"
+          onPointerDown={startResizeRightPanel}
+        />
+      )}
 
       {/* ===== 4. Right Panel (Dynamic Analysis) ===== */}
       <aside className="right-panel" id="right-panel">
