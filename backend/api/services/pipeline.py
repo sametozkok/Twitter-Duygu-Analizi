@@ -25,7 +25,7 @@ from backend.storage.run_store import (
     update_run_replies,
     update_run_sentiment,
 )
-from config import GEMINI_API_KEY
+from config import GEMINI_API_KEY, TWITTER_AUTH_TOKEN, TWITTER_BEARER_TOKEN, TWITTER_CT0
 
 
 def run_match_pipeline(request: MatchRequest) -> MatchResponse:
@@ -84,6 +84,10 @@ def run_replies_pipeline(request: RepliesRequest) -> RepliesResponse:
     group_results: list[AnalysisGroup] = []
     total_replies = 0
 
+    resolved_auth_token = (request.twitter_auth_token or "").strip() or (TWITTER_AUTH_TOKEN or "").strip()
+    resolved_ct0 = (request.twitter_ct0 or "").strip() or (TWITTER_CT0 or "").strip()
+    resolved_bearer = (request.twitter_bearer_token or "").strip() or (TWITTER_BEARER_TOKEN or "").strip()
+
     for group in request.matched_groups:
         replies_by_channel: dict[str, list[dict]] = {}
         emotion_results: dict[str, dict] = {}
@@ -97,9 +101,9 @@ def run_replies_pipeline(request: RepliesRequest) -> RepliesResponse:
             replies = fetch_tweet_replies(
                 tweet_id,
                 str(tweet.get("channel", "")),
-                auth_token=request.twitter_auth_token,
-                ct0=request.twitter_ct0,
-                bearer_token=request.twitter_bearer_token,
+                auth_token=resolved_auth_token,
+                ct0=resolved_ct0,
+                bearer_token=resolved_bearer,
                 max_replies=request.reply_count,
             )
 
