@@ -112,6 +112,14 @@ a { text-decoration: none; color: var(--text-link); }
   overflow: hidden;
 }
 
+.app-shell.left-panel-collapsed {
+  grid-template-columns: var(--sidebar-width) 0 1fr calc(var(--right-panel-width) + var(--left-panel-width));
+}
+
+.app-shell.left-panel-collapsed .left-panel {
+  display: none;
+}
+
 /* ===================================================================
    LEFT NAV SIDEBAR (Narrow Icon Bar)
    =================================================================== */
