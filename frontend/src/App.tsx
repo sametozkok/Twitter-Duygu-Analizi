@@ -71,6 +71,60 @@ function XLogo() {
   )
 }
 
+function UiIcon({ name }: { name: 'dashboard' | 'history' | 'assessment' | 'notifications' | 'settings' | 'chevron_left' | 'chevron_right' | 'close' }) {
+  const common = { className: 'ui-icon', viewBox: '0 0 24 24', 'aria-hidden': true as const }
+  switch (name) {
+    case 'dashboard':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+        </svg>
+      )
+    case 'history':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="M13 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 13 5c1.93 0 3.68.78 4.95 2.05L15 10h7V3l-2.64 2.64A8.96 8.96 0 0 0 13 3zm-1 5h2v6l5.25 3.15-1 1.64L12 15V8z" />
+        </svg>
+      )
+    case 'assessment':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="M5 9.2h3v10H5V9.2zM10.5 4h3v15h-3V4zM16 12h3v7h-3v-7z" />
+        </svg>
+      )
+    case 'notifications':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 1 0-12 0v5L4 18v1h16v-1l-2-2z" />
+        </svg>
+      )
+    case 'settings':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 7.02a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54c.04.24.25.42.49.42h3.8c.24 0 .45-.18.49-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96c.24.1.51.01.64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z" />
+        </svg>
+      )
+    case 'chevron_left':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+        </svg>
+      )
+    case 'chevron_right':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="m8.59 16.59 1.41 1.41 6-6-6-6-1.41 1.41L13.17 12z" />
+        </svg>
+      )
+    case 'close':
+      return (
+        <svg {...common}>
+          <path fill="currentColor" d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L12 13.41 5.71 19.71 4.29 18.29 10.59 12 4.29 5.71 5.71 4.29 12 10.59l6.29-6.3z" />
+        </svg>
+      )
+  }
+}
+
 /* ========== Doughnut Chart Component ========== */
 
 function DoughnutChart({ positive, negative, neutral }: { positive: number; negative: number; neutral: number }) {
@@ -584,7 +638,7 @@ export default function App() {
           type="button"
           onClick={showDashboardView}
         >
-          <span className="icon">dashboard</span>
+          <UiIcon name="dashboard" />
         </button>
         <button
           className={`nav-item${currentView === 'archive' ? ' active' : ''}`}
@@ -593,7 +647,7 @@ export default function App() {
           type="button"
           onClick={showArchiveView}
         >
-          <span className="icon">history</span>
+          <UiIcon name="history" />
         </button>
         <button
           className={`nav-item${currentView === 'analytics' ? ' active' : ''}`}
@@ -602,7 +656,7 @@ export default function App() {
           type="button"
           onClick={showAnalyticsView}
         >
-          <span className="icon">assessment</span>
+          <UiIcon name="assessment" />
         </button>
         <button
           className={`nav-item${currentView === 'alerts' ? ' active' : ''}`}
@@ -611,7 +665,7 @@ export default function App() {
           type="button"
           onClick={showAlertsView}
         >
-          <span className="icon">notifications</span>
+          <UiIcon name="notifications" />
         </button>
 
         <div className="nav-spacer" />
@@ -625,7 +679,7 @@ export default function App() {
           aria-expanded={isLeftPanelOpen}
           aria-controls="left-panel"
         >
-          <span className="icon">settings</span>
+          <UiIcon name="settings" />
         </button>
       </nav>
 
@@ -650,7 +704,7 @@ export default function App() {
             aria-label="Ayarlar panelini kapat"
             title="Kapat"
           >
-            <span className="icon">close</span>
+            <UiIcon name="close" />
           </button>
         </div>
 
@@ -1285,7 +1339,7 @@ export default function App() {
             aria-label={isRightPanelOpen ? 'Analiz panelini kapat' : 'Analiz panelini aç'}
             title={isRightPanelOpen ? 'Kapat' : 'Aç'}
           >
-            <span className="icon">{isRightPanelOpen ? 'chevron_right' : 'chevron_left'}</span>
+            <UiIcon name={isRightPanelOpen ? 'chevron_right' : 'chevron_left'} />
           </button>
         </div>
 
@@ -1516,7 +1570,7 @@ export default function App() {
           aria-label="Analiz panelini aç"
           title="Analiz panelini aç"
         >
-          <span className="icon">chevron_left</span>
+          <UiIcon name="chevron_left" />
         </button>
       )}
     </div>
