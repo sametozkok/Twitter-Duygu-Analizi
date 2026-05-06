@@ -162,8 +162,6 @@ const ALGORITHM_ORDER = [
   { key: 'api', title: 'Gemini API', fallbackEngine: 'gemini-api' },
 ]
 
-const LEFT_PANEL_STORAGE_KEY = 'leftPanelOpen'
-
 /* ========== Main App ========== */
 
 export default function App() {
@@ -186,12 +184,6 @@ export default function App() {
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0)
   const [editingChannelIndex, setEditingChannelIndex] = useState<number | null>(null)
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({})
-  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(() => {
-    if (typeof window === 'undefined') return true
-    const stored = window.localStorage.getItem(LEFT_PANEL_STORAGE_KEY)
-    if (stored === null) return true
-    return stored === 'true'
-  })
 
   const [currentView, setCurrentView] = useState<'dashboard' | 'archive'>('dashboard')
   const [currentRunId, setCurrentRunId] = useState<string | null>(null)
@@ -200,11 +192,6 @@ export default function App() {
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const [archiveOpeningId, setArchiveOpeningId] = useState<string | null>(null)
   const [archiveDeletingId, setArchiveDeletingId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(LEFT_PANEL_STORAGE_KEY, String(isLeftPanelOpen))
-  }, [isLeftPanelOpen])
 
   const activeChannels = useMemo(
     () => channels.map((item) => item.trim()).filter((item) => item.length > 0),
@@ -471,7 +458,7 @@ export default function App() {
   /* ========== RENDER ========== */
 
   return (
-    <div className={`app-shell${isLeftPanelOpen ? '' : ' left-panel-collapsed'}`}>
+    <div className="app-shell">
       {/* ===== 1. Nav Sidebar (Narrow Icon Bar) ===== */}
       <nav className="nav-sidebar" id="nav-sidebar">
         <button className="nav-logo" title="X Haber Analiz Pro" id="nav-logo">
@@ -508,14 +495,7 @@ export default function App() {
 
         <div className="nav-spacer" />
 
-        <button
-          className="nav-item"
-          title="Ayarlar"
-          id="nav-settings"
-          type="button"
-          onClick={() => setIsLeftPanelOpen((prev) => !prev)}
-          aria-pressed={isLeftPanelOpen}
-        >
+        <button className="nav-item" title="Ayarlar" id="nav-settings">
           <span className="icon">settings</span>
         </button>
       </nav>
