@@ -2034,6 +2034,52 @@ body.is-resizing {
   color: var(--text-secondary);
 }
 
+/* Sentiment renkli chip varyantları */
+.algo-chip-positive {
+  background: color-mix(in srgb, var(--positive) 12%, transparent);
+  border-color: color-mix(in srgb, var(--positive) 35%, transparent);
+}
+
+.algo-chip-positive .algo-chip-name {
+  color: var(--positive);
+}
+
+.algo-chip-negative {
+  background: color-mix(in srgb, var(--negative) 12%, transparent);
+  border-color: color-mix(in srgb, var(--negative) 35%, transparent);
+}
+
+.algo-chip-negative .algo-chip-name {
+  color: var(--negative);
+}
+
+.algo-chip-neutral {
+  background: color-mix(in srgb, var(--neutral) 12%, transparent);
+  border-color: color-mix(in srgb, var(--neutral) 35%, transparent);
+}
+
+.algo-chip-neutral .algo-chip-name {
+  color: var(--neutral);
+}
+
+.algo-chip.is-dominant {
+  box-shadow: 0 0 0 1px currentColor inset;
+  font-weight: 700;
+}
+
+.comparison-card-footer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.comparison-total-label strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
 /* --- Sentiment Compare Button --- */
 .compare-section {
   padding: 0 20px 20px;

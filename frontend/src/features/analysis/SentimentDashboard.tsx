@@ -204,7 +204,13 @@ export function SentimentDashboard(props: {
         <div className="comparison-cards">
           {Object.entries(selectedCompareGroup.channel_results).map(([channel, result]) => {
             const algo = result.algorithms?.[selectedAlgorithmKey]
-            const dominantRaw = String(algo?.summary?.dominant ?? '').toLowerCase()
+            const summary = algo?.summary
+            const total = summary?.total ?? 0
+            const positive = summary?.positive ?? 0
+            const negative = summary?.negative ?? 0
+            const neutral = summary?.neutral ?? 0
+
+            const dominantRaw = String(summary?.dominant ?? '').toLowerCase()
             const dominantKey =
               dominantRaw === 'positive' || dominantRaw === 'pozitif'
                 ? 'positive'
@@ -213,8 +219,8 @@ export function SentimentDashboard(props: {
                   : dominantRaw === 'neutral' || dominantRaw === 'nötr' || dominantRaw === 'notr'
                     ? 'neutral'
                     : null
-            const dominantLabel = dominantKey ? t(`analysis:sentiments.${dominantKey}` as any) : (algo?.summary?.dominant ?? '-')
-            const total = algo?.summary?.total ?? 0
+
+            const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0)
 
             return (
               <div className="comparison-card" key={`${selectedCompareGroup.topic}-${channel}`}>
@@ -226,10 +232,21 @@ export function SentimentDashboard(props: {
                   <span className="comparison-best-algo">{t(`analysis:algorithm.${selectedAlgorithmKey}` as any, { defaultValue: selectedAlgorithmKey })}</span>
                 </div>
                 <div className="comparison-algo-row">
-                  <span className="algo-chip">
-                    <span className="algo-chip-name">{dominantLabel}</span>
-                    <span className="algo-chip-total">({total})</span>
+                  <span className={`algo-chip algo-chip-positive${dominantKey === 'positive' ? ' is-dominant' : ''}`}>
+                    <span className="algo-chip-name">{t('analysis:sentiments.positive')}</span>
+                    <span className="algo-chip-total">{positive} ({pct(positive)}%)</span>
                   </span>
+                  <span className={`algo-chip algo-chip-negative${dominantKey === 'negative' ? ' is-dominant' : ''}`}>
+                    <span className="algo-chip-name">{t('analysis:sentiments.negative')}</span>
+                    <span className="algo-chip-total">{negative} ({pct(negative)}%)</span>
+                  </span>
+                  <span className={`algo-chip algo-chip-neutral${dominantKey === 'neutral' ? ' is-dominant' : ''}`}>
+                    <span className="algo-chip-name">{t('analysis:sentiments.neutral')}</span>
+                    <span className="algo-chip-total">{neutral} ({pct(neutral)}%)</span>
+                  </span>
+                </div>
+                <div className="comparison-card-footer">
+                  <span className="comparison-total-label">Toplam: <strong>{total}</strong></span>
                 </div>
               </div>
             )
