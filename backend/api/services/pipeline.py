@@ -25,12 +25,20 @@ from backend.storage.run_store import (
     update_run_replies,
     update_run_sentiment,
 )
-from config import GEMINI_API_KEY, TWITTER_AUTH_TOKEN, TWITTER_BEARER_TOKEN, TWITTER_CT0
+from config import GEMINI_API_KEY, GROK_API_KEY, LLM_PROVIDER, TWITTER_AUTH_TOKEN, TWITTER_BEARER_TOKEN, TWITTER_CT0
 
 
 def run_match_pipeline(request: MatchRequest) -> MatchResponse:
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY tanimli degil. Sunucu ortam degiskenlerini kontrol edin.")
+    # Aktif LLM sağlayıcının key'i tanımlı mı kontrol et
+    provider = (LLM_PROVIDER or "").strip().lower()
+    if provider in {"groq", "grok"}:
+        if not GROK_API_KEY:
+            raise ValueError("GROQ_API_KEY tanimli degil. Sunucu ortam degiskenlerini kontrol edin.")
+    elif provider == "gemini":
+        if not GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY tanimli degil. Sunucu ortam degiskenlerini kontrol edin.")
+    elif not GROK_API_KEY and not GEMINI_API_KEY:
+        raise ValueError("Hiçbir LLM API key'i tanimli degil (GROQ_API_KEY veya GEMINI_API_KEY).")
 
     resolved_bearer = (request.twitter_bearer_token or "").strip() or (TWITTER_BEARER_TOKEN or "").strip()
     channels_data = fetch_multiple_channels(

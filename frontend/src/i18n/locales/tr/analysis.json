@@ -27,7 +27,7 @@
   },
   "algorithm": {
     "bert": "BERT",
-    "api": "Gemini API"
+    "api": "Groq API"
   }
 }
 

@@ -391,7 +391,7 @@ function RightPanelSkeleton({ title }: { title: string }) {
 
 const ALGORITHM_ORDER = [
   { key: 'bert', title: 'BERT', fallbackEngine: 'bert-model' },
-  { key: 'api', title: 'Gemini API', fallbackEngine: 'gemini-api' },
+  { key: 'api', title: 'Groq API', fallbackEngine: 'groq-api' },
 ]
 
 /* ========== Main App ========== */

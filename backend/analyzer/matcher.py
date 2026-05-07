@@ -1,5 +1,6 @@
 """
-Haber Eşleştirme - Google Gemini API ile haberleri karşılaştır
+Haber Eşleştirme - LLM (Groq / Gemini) ile haberleri karşılaştır.
+Aktif sağlayıcı .env'deki LLM_PROVIDER değerine göre seçilir (varsayılan: Groq).
 (Optimizasyon: ön filtreleme, metin budama, duplicate eleme, kompakt prompt)
 """
 import json
