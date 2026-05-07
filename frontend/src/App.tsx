@@ -1534,19 +1534,27 @@ export default function App() {
                                 {tweet.media.slice(0, 4).map((m, mIdx) => {
                                   const key = `${tweet.tweet_id ?? tweet.id ?? safeIndex}-media-${mIdx}`
                                   const isVideo = m.type === 'video' || m.type === 'animated_gif'
-                                  if (isVideo && m.video_url) {
+                                  // Twitter video CDN'i 3rd-party domain'i 403 ile engelliyor.
+                                  // Kapak görseli + play overlay; tıklayınca Twitter'da aç.
+                                  if (isVideo) {
+                                    const linkHref = tweet.url || m.url || '#'
                                     return (
-                                      <div key={key} className="tweet-media-item tweet-media-video">
-                                        <video
-                                          src={m.video_url}
-                                          poster={m.url}
-                                          controls
-                                          preload="metadata"
-                                          playsInline
-                                          loop={m.type === 'animated_gif'}
-                                          muted={m.type === 'animated_gif'}
-                                        />
-                                      </div>
+                                      <a
+                                        key={key}
+                                        href={linkHref}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="tweet-media-item tweet-media-video"
+                                        aria-label="Videoyu Twitter'da aç"
+                                      >
+                                        {m.url && <img src={m.url} alt="" loading="lazy" />}
+                                        <span className="tweet-media-play" aria-hidden="true">
+                                          <span className="icon">play_arrow</span>
+                                        </span>
+                                        {m.type === 'animated_gif' && (
+                                          <span className="tweet-media-badge">GIF</span>
+                                        )}
+                                      </a>
                                     )
                                   }
                                   return m.url ? (
