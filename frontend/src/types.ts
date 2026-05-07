@@ -5,6 +5,12 @@ export type MatchRequest = {
   twitter_bearer_token?: string
 }
 
+export type TweetMedia = {
+  type?: string
+  url?: string
+  video_url?: string
+}
+
 export type TweetItem = {
   channel?: string
   tweet_id?: string
@@ -15,6 +21,7 @@ export type TweetItem = {
   replies?: number
   retweets?: number
   date_formatted?: string
+  media?: TweetMedia[]
 }
 
 export type ReplyItem = {

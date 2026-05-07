@@ -1529,11 +1529,40 @@ export default function App() {
 
                             <p className="tweet-text">{tweet.text ?? '-'}</p>
 
-                            <div className="tweet-media" aria-hidden="true">
-                              <div className="tweet-media-placeholder">
-                                <span className="icon">image</span>
+                            {tweet.media && tweet.media.length > 0 && (
+                              <div className={`tweet-media tweet-media-grid-${Math.min(tweet.media.length, 4)}`}>
+                                {tweet.media.slice(0, 4).map((m, mIdx) => {
+                                  const key = `${tweet.tweet_id ?? tweet.id ?? safeIndex}-media-${mIdx}`
+                                  const isVideo = m.type === 'video' || m.type === 'animated_gif'
+                                  if (isVideo && m.video_url) {
+                                    return (
+                                      <div key={key} className="tweet-media-item tweet-media-video">
+                                        <video
+                                          src={m.video_url}
+                                          poster={m.url}
+                                          controls
+                                          preload="metadata"
+                                          playsInline
+                                          loop={m.type === 'animated_gif'}
+                                          muted={m.type === 'animated_gif'}
+                                        />
+                                      </div>
+                                    )
+                                  }
+                                  return m.url ? (
+                                    <a
+                                      key={key}
+                                      href={m.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="tweet-media-item"
+                                    >
+                                      <img src={m.url} alt="" loading="lazy" />
+                                    </a>
+                                  ) : null
+                                })}
                               </div>
-                            </div>
+                            )}
 
                             <div className="tweet-engagement">
                               <Metric icon="favorite" value={formatMetricValue(tweet.likes)} />

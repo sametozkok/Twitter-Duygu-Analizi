@@ -1086,22 +1086,75 @@ body.is-resizing {
 
 .tweet-media {
   margin-top: 6px;
-}
-
-.tweet-media-placeholder {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 14px;
-  background: rgba(56, 68, 77, 0.18);
-  border: 1px solid var(--border-subtle);
   display: grid;
-  place-items: center;
-  color: var(--text-tertiary);
+  gap: 4px;
+  border-radius: 14px;
+  overflow: hidden;
 }
 
-.tweet-media-placeholder .icon {
-  font-size: 28px;
-  opacity: 0.7;
+.tweet-media-grid-1 {
+  grid-template-columns: 1fr;
+}
+
+.tweet-media-grid-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tweet-media-grid-3 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tweet-media-grid-3 .tweet-media-item:first-child {
+  grid-column: span 2;
+}
+
+.tweet-media-grid-4 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tweet-media-item {
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(56, 68, 77, 0.18);
+}
+
+.tweet-media-grid-1 .tweet-media-item {
+  aspect-ratio: 16 / 9;
+}
+
+.tweet-media-grid-2 .tweet-media-item,
+.tweet-media-grid-3 .tweet-media-item,
+.tweet-media-grid-4 .tweet-media-item {
+  aspect-ratio: 1 / 1;
+}
+
+.tweet-media-grid-3 .tweet-media-item:first-child {
+  aspect-ratio: 16 / 9;
+}
+
+.tweet-media-item img,
+.tweet-media-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.tweet-media-item:hover img {
+  transform: scale(1.02);
+}
+
+.tweet-media-video {
+  position: relative;
+  background: #000;
+}
+
+.tweet-media-video video {
+  object-fit: contain;
 }
 
 @keyframes slide-down {
@@ -1265,7 +1318,7 @@ body.is-resizing {
 .tweet-replies-list {
   display: grid;
   gap: 10px;
-  max-height: 320px;
+  max-height: 640px;
   overflow-y: auto;
   padding-right: 4px;
 }

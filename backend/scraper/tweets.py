@@ -233,13 +233,29 @@ def fetch_user_tweets(username_or_url: str, count: int = 10, bearer_token: str |
                     replies = int(fallback_metrics.get("replies", replies) or replies)
                     quotes = int(fallback_metrics.get("quotes", quotes) or quotes)
 
-                # Medya
+                # Medya — video için extended_entities daha zengindir
                 media = []
-                for m in legacy.get("entities", {}).get("media", []):
-                    media.append({
-                        "type": m.get("type", ""),
+                media_entries = (
+                    legacy.get("extended_entities", {}).get("media")
+                    or legacy.get("entities", {}).get("media")
+                    or []
+                )
+                for m in media_entries:
+                    media_type = m.get("type", "")
+                    media_item = {
+                        "type": media_type,
                         "url": m.get("media_url_https", ""),
-                    })
+                    }
+                    # Video / animated_gif: en yüksek bitrate MP4'ü seç
+                    if media_type in {"video", "animated_gif"}:
+                        variants = (m.get("video_info") or {}).get("variants") or []
+                        mp4_variants = [
+                            v for v in variants if v.get("content_type") == "video/mp4" and v.get("url")
+                        ]
+                        if mp4_variants:
+                            best = max(mp4_variants, key=lambda v: int(v.get("bitrate", 0) or 0))
+                            media_item["video_url"] = best.get("url", "")
+                    media.append(media_item)
 
                 tweet_count += 1
                 result["tweets"].append({
