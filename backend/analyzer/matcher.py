@@ -520,6 +520,7 @@ def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -
                 "replies": tw.get("replies", 0),
                 "retweets": tw.get("retweets", 0),
                 "date_formatted": tw.get("date_formatted", ""),
+                "media": tw.get("media", []),
             })
     
     if not all_tweets:
