@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { SegmentedControl } from '../../components/SegmentedControl'
@@ -100,7 +100,7 @@ export function SentimentDashboard(props: {
   algorithmOrder: AlgorithmOrderItem[]
   selectedAlgorithmKey: string
   setSelectedAlgorithmKey: (k: string) => void
-  algorithmTotals: Record<string, { positive: number; negative: number; neutral: number; total: number; engine?: string }>
+  algorithmTotals: Record<string, { positive: number; negative: number; neutral: number; total: number; engine?: string; available?: boolean; error?: string }>
   wordCloudByAlgorithm: Record<string, { text: string; weight: number }[]> | null
   selectedCompareGroup: SentimentCompareGroup
 }) {
@@ -109,25 +109,14 @@ export function SentimentDashboard(props: {
   const selectedAlgo = useMemo(() => algorithmOrder.find((a) => a.key === selectedAlgorithmKey) ?? algorithmOrder[0], [algorithmOrder, selectedAlgorithmKey])
   const totals = selectedAlgo ? algorithmTotals[selectedAlgo.key] : null
   const words = selectedAlgo ? (wordCloudByAlgorithm?.[selectedAlgo.key] ?? []) : []
-  const isApiFallback = useMemo(() => {
-    const apiTotals = algorithmTotals['api']
-    const engine = String(apiTotals?.engine ?? '')
-    if (!engine) return false
-    return engine.toLowerCase().includes('bert') || engine.toLowerCase().includes('yerel') || engine.toLowerCase().includes('başarısız')
-  }, [algorithmTotals])
+  const isUnavailable = totals?.available === false
 
   const engineLabel = useMemo(() => {
     if (!selectedAlgo || !totals) return ''
-    if (selectedAlgo.key === 'api' && isApiFallback) return ''
+    if (isUnavailable) return ''
     return totals.engine ?? selectedAlgo.fallbackEngine
-  }, [isApiFallback, selectedAlgo, totals])
+  }, [isUnavailable, selectedAlgo, totals])
 
-  // If API is unavailable, force selection back to BERT.
-  useEffect(() => {
-    if (isApiFallback && selectedAlgorithmKey === 'api') {
-      setSelectedAlgorithmKey('bert')
-    }
-  }, [isApiFallback, selectedAlgorithmKey, setSelectedAlgorithmKey])
 
   return (
     <>
@@ -139,7 +128,7 @@ export function SentimentDashboard(props: {
           options={algorithmOrder.map((algo) => ({
             value: algo.key,
             label: t(`analysis:algorithm.${algo.key}` as any, { defaultValue: algo.title }),
-            disabled: algo.key === 'api' ? isApiFallback : false,
+            disabled: false,
           }))}
         />
       </div>
@@ -154,7 +143,21 @@ export function SentimentDashboard(props: {
             {engineLabel ? <span className="sentiment-engine">{engineLabel}</span> : null}
           </div>
 
-          {!totals || totals.total === 0 ? (
+          {isUnavailable ? (
+            <div className="sentiment-empty sentiment-unavailable">
+              <div className="sentiment-unavailable-title">
+                {t('analysis:unavailable.title', { defaultValue: 'Bu model şu anda kullanılamıyor' })}
+              </div>
+              <div className="sentiment-unavailable-body">
+                {totals?.error
+                  ? totals.error
+                  : t('analysis:unavailable.cuteFallback', {
+                      defaultValue:
+                        'Şu anda duygularla ilgilenmek istemiyorum, depresyondayım. 🥲',
+                    })}
+              </div>
+            </div>
+          ) : !totals || totals.total === 0 ? (
             <div className="sentiment-empty">{t('analysis:noResultForAlgorithm')}</div>
           ) : (
             <>
@@ -196,7 +199,7 @@ export function SentimentDashboard(props: {
         </div>
       </div>
 
-      <div className="channel-comparison" id="channel-comparison">
+      <div className="channel-comparison" id="channel-comparison" style={isUnavailable ? { display: 'none' } : undefined}>
         <div className="comparison-title">
           <span className="icon">compare</span>
           {t('analysis:channelComparison')}

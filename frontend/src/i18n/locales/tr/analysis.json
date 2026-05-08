@@ -17,6 +17,10 @@
   "channelComparison": "Kanal Karşılaştırma",
   "jsonSaved": "JSON kaydı: {{path}}",
   "noResultForAlgorithm": "Bu algoritma için sonuç bulunamadı.",
+  "unavailable": {
+    "title": "Bu model şu anda kullanılamıyor",
+    "cuteFallback": "Şu anda duygularla ilgilenmek istemiyorum, depresyondayım. 🥲"
+  },
   "locked": {
     "title": "Duygu Analizi"
   },
@@ -27,6 +31,8 @@
   },
   "algorithm": {
     "bert": "BERT",
+    "groq": "Groq API",
+    "gemini": "Gemini API",
     "api": "Groq API"
   }
 }

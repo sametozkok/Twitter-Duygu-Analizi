@@ -17,6 +17,10 @@
   "channelComparison": "Channel Comparison",
   "jsonSaved": "JSON saved: {{path}}",
   "noResultForAlgorithm": "No results found for this algorithm.",
+  "unavailable": {
+    "title": "This model is currently unavailable",
+    "cuteFallback": "I don't feel like dealing with feelings right now, I'm a bit depressed. 🥲"
+  },
   "locked": {
     "title": "Sentiment Analysis"
   },
@@ -27,6 +31,8 @@
   },
   "algorithm": {
     "bert": "BERT",
+    "groq": "Groq API",
+    "gemini": "Gemini API",
     "api": "Groq API"
   }
 }

@@ -1826,6 +1826,26 @@ body.is-resizing {
   text-align: center;
 }
 
+.sentiment-unavailable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px 18px;
+  line-height: 1.55;
+}
+
+.sentiment-unavailable-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.sentiment-unavailable-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
 /* --- Doughnut Chart --- */
 .chart-container {
   display: flex;

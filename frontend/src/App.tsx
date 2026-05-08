@@ -391,7 +391,8 @@ function RightPanelSkeleton({ title }: { title: string }) {
 
 const ALGORITHM_ORDER = [
   { key: 'bert', title: 'BERT', fallbackEngine: 'bert-model' },
-  { key: 'api', title: 'Groq API', fallbackEngine: 'groq-api' },
+  { key: 'groq', title: 'Groq API', fallbackEngine: 'groq-api' },
+  { key: 'gemini', title: 'Gemini API', fallbackEngine: 'gemini-api' },
 ]
 
 /* ========== Main App ========== */
@@ -470,10 +471,10 @@ export default function App() {
 
   const algorithmTotals = useMemo(() => {
     if (!selectedCompareGroup) return null
-    const totals: Record<string, { positive: number; negative: number; neutral: number; total: number; engine?: string }> = {}
+    const totals: Record<string, { positive: number; negative: number; neutral: number; total: number; engine?: string; available?: boolean; error?: string }> = {}
 
     ALGORITHM_ORDER.forEach((algo) => {
-      totals[algo.key] = { positive: 0, negative: 0, neutral: 0, total: 0 }
+      totals[algo.key] = { positive: 0, negative: 0, neutral: 0, total: 0, available: true }
     })
 
     Object.values(selectedCompareGroup.channel_results).forEach((cr) => {
@@ -485,6 +486,12 @@ export default function App() {
         totals[name].total += algo.summary.total
         if (!totals[name].engine && algo.engine) {
           totals[name].engine = algo.engine
+        }
+        if (algo.available === false) {
+          totals[name].available = false
+        }
+        if (!totals[name].error && algo.error) {
+          totals[name].error = algo.error
         }
       })
     })
@@ -681,7 +688,7 @@ export default function App() {
     try {
       const response = await runSentimentCompare({
         matched_groups: repliesResult.matched_groups,
-        algorithms: ['bert', 'api'],
+        algorithms: ['bert', 'groq', 'gemini'],
         save_to_json: true,
         run_id: currentRunId,
       })
