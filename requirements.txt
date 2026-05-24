@@ -1,4 +1,6 @@
-streamlit
+# torch için CPU-only wheel index'i (GPU yok, ~2 GB daha küçük image)
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 requests
 beautifulsoup4
 lxml

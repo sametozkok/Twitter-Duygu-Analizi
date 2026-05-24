@@ -7,15 +7,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Sistem bağımlılıkları (curl healthcheck için, build-essential bazı paketler için)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Bağımlılıkları önce yükle (kod değişse de bu layer cache'lenir)
+# Sistem bağımlılıkları + pip install tek RUN'da:
+# build-essential pip install için gerek, sonra purge → image ~400 MB küçülür.
+# curl healthcheck için runtime'da kalır.
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential curl \
+    && pip install -r requirements.txt \
+    && apt-get purge -y --auto-remove build-essential \
+    && rm -rf /var/lib/apt/lists/* /root/.cache/pip
 
 # Backend kaynak kodu
 COPY backend/ ./backend/
