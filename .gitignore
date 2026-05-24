@@ -21,6 +21,7 @@ Thumbs.db
 # Local outputs
 !data/.gitkeep
 data/analysis_runs/
+*-local.*.log
 
 # Frontend artifacts
 frontend/dist/
