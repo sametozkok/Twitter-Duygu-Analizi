@@ -26,7 +26,7 @@ Yeni geliştirme hattı `frontend/` klasöründeki React uygulaması ve `backend
 Uygulama akışı 3 ana adımdan oluşur:
 1. Girilen haber kanallarının son tweetleri çekilir.
 2. Tweetler Gemini API ile konu bazında eşleştirilir (gerekirse anahtar kelime fallback).
-3. Eşleşen tweetlerin yorumları toplanır ve Türkçe BERT modeli ile pozitif/negatif sınıflandırılır.
+3. Eşleşen tweetlerin yorumları toplanır ve Türkçe BERT ya da Twitter XLM-RoBERTa modelleri ile duygu analizine (pozitif/nötr/negatif) tabi tutulur.
 
 Yeni arayüz React ile hazırlanıyor.
 
@@ -35,8 +35,10 @@ Yeni arayüz React ile hazırlanıyor.
 - URL veya kullanıcı adı üzerinden tweet çekme.
 - Ortak haber eşleştirme (LLM + fallback eşleştirme).
 - Yorum toplama (syndication/CDN yöntemleri).
-- Türkçe duygu analizi (`savasy/bert-base-turkish-sentiment-cased`).
-- Modern React arayüz, temiz panel yapısı ve bileşen tabanlı ekranlar.
+- Türkçe duygu analizi:
+  - BERT Modeli (`savasy/bert-base-turkish-sentiment-cased`)
+  - RoBERTa Modeli (`cardiffnlp/twitter-xlm-roberta-base-sentiment`)
+- Modern React arayüz, temiz panel yapısı, karşılaştırmalı grafikler ve bileşen tabanlı ekranlar.
 
 ## Proje Yapısı
 ```text
@@ -57,7 +59,7 @@ Twitter/
 - **Arayüz:** React + Vite
 - **HTTP & Parsing:** requests, BeautifulSoup
 - **LLM Eşleştirme:** Google Gemini API
-- **NLP:** transformers, torch
+- **NLP:** transformers, torch, sentencepiece, tiktoken
 - **Görselleştirme:** plotly
 - **Ortam Değişkenleri:** python-dotenv
 
@@ -88,6 +90,7 @@ Proje kök dizininde `.env` dosyası oluşturun (isterseniz `.env.example` dosya
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 TWITTER_BEARER_TOKEN=your_twitter_bearer_token_here
+SENTIMENT_ALLOW_MODEL_DOWNLOAD=1 # 1 ise Hugging Face modelleri sunucuda yoksa otomatik indirilir
 ```
 
 Gemini anahtarını Google AI Studio üzerinden alabilirsiniz: https://aistudio.google.com/apikey
@@ -214,8 +217,12 @@ Yorumlardan duygu analizi için adım adım uygulama planı burada:
 - Bazı tweetlerde yorumlara public erişim kısıtlı olabilir.
 - Bu durumda uygulama analiz adımını bilgi mesajı ile geçer.
 
-### Model ilk açılışta yavaş
-- `transformers` modeli ilk kullanımda indirildiği için ilk analiz uzun sürebilir.
+### Model ilk açılışta yavaş veya zaman aşımı veriyor
+- `transformers` modelleri (BERT ve RoBERTa) ilk kullanımda internetten indirildiği için ilk analiz uzun sürebilir (~1-2 dakika). Sonraki istekler tamamen önbellek üzerinden çalıştığından anında yanıtlanır.
+- Sunucunun ilk istekte zaman aşımına uğramaması için sunucu ayağa kalkarken modellerin önceden çekilmesini sağlayacak `SENTIMENT_ALLOW_MODEL_DOWNLOAD=1` parametresinin `.env`'de tanımlı olduğundan emin olun.
+
+### Tiktoken veya Sentencepiece Kaynaklı Hatalar
+- Bazı Linux/Windows sunucularda XLM-RoBERTa modeli yüklenirken BPE parser uyuşmazlığı yaşanabilir. Kodumuzda otomatik `AutoTokenizer` yerine doğrudan `XLMRobertaTokenizer` zorlanarak bu hata aşılmıştır. Bağımlılıkların eksiksiz kurulması için `pip install -r requirements.txt` komutunu çalıştırdığınızdan emin olun.
 
 ## Sık Kullanılan Komutlar
 ```bash

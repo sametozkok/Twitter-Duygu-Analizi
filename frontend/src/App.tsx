@@ -436,6 +436,7 @@ function RightPanelSkeleton({ title }: { title: string }) {
 
 const ALGORITHM_ORDER = [
   { key: 'bert', title: 'BERT', fallbackEngine: 'bert-model' },
+  { key: 'roberta', title: 'RoBERTa', fallbackEngine: 'roberta-model' },
   { key: 'groq', title: 'Groq API', fallbackEngine: 'groq-api' },
   { key: 'gemini', title: 'Gemini API', fallbackEngine: 'gemini-api' },
 ]
@@ -737,7 +738,7 @@ export default function App() {
     try {
       const response = await runSentimentCompare({
         matched_groups: repliesResult.matched_groups,
-        algorithms: ['bert', 'groq', 'gemini'],
+        algorithms: ['bert', 'roberta', 'groq', 'gemini'],
         save_to_json: true,
         run_id: currentRunId,
       })

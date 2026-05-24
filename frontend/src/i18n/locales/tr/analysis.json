@@ -31,6 +31,7 @@
   },
   "algorithm": {
     "bert": "BERT",
+    "roberta": "RoBERTa",
     "groq": "Groq API",
     "gemini": "Gemini API",
     "api": "Groq API"

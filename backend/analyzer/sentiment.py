@@ -9,6 +9,9 @@ from transformers import pipeline
 _sentiment_pipeline = None
 _sentiment_pipeline_checked = False
 
+_roberta_pipeline = None
+_roberta_pipeline_checked = False
+
 POSITIVE_WORDS = {
     "iyi",
     "guzel",
@@ -54,7 +57,7 @@ def _get_pipeline():
 
     _sentiment_pipeline_checked = True
     try:
-        allow_download = os.getenv("SENTIMENT_ALLOW_MODEL_DOWNLOAD", "0") == "1"
+        allow_download = os.getenv("SENTIMENT_ALLOW_MODEL_DOWNLOAD", "1") == "1"
         _sentiment_pipeline = pipeline(
             "sentiment-analysis",
             model="savasy/bert-base-turkish-sentiment-cased",
@@ -211,6 +214,101 @@ def analyze_sentiment_bulk(texts: list[str]) -> list[dict]:
             if "pos" in raw_label:
                 label = "positive"
             elif "neg" in raw_label:
+                label = "negative"
+            else:
+                label = "neutral"
+
+            results.append({
+                "label": label,
+                "score": score,
+                "emoji": "+" if label == "positive" else "-" if label == "negative" else "N",
+            })
+            
+    except Exception:
+        return [_fallback_rule_sentiment(text) for text in texts]
+        
+    return results
+
+
+def _get_roberta_pipeline():
+    """Lazy-load Cardiff RoBERTa pipeline once and cache result (including failure)."""
+    global _roberta_pipeline, _roberta_pipeline_checked
+    if _roberta_pipeline_checked:
+        return _roberta_pipeline
+
+    _roberta_pipeline_checked = True
+    try:
+        from transformers import AutoModelForSequenceClassification, XLMRobertaTokenizer
+        allow_download = os.getenv("SENTIMENT_ALLOW_MODEL_DOWNLOAD", "1") == "1"
+        model_id = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+        tokenizer = XLMRobertaTokenizer.from_pretrained(model_id, local_files_only=not allow_download)
+        model = AutoModelForSequenceClassification.from_pretrained(model_id, local_files_only=not allow_download)
+        
+        _roberta_pipeline = pipeline(
+            "text-classification",
+            model=model,
+            tokenizer=tokenizer,
+            truncation=True,
+            max_length=512,
+            framework="pt",
+            device=-1,
+        )
+    except Exception:
+        _roberta_pipeline = None
+
+    return _roberta_pipeline
+
+
+def analyze_roberta(text: str) -> dict:
+    """Analyze one text using RoBERTa and return label/score."""
+    pipe = _get_roberta_pipeline()
+    if pipe is None:
+        return _fallback_rule_sentiment(text)
+
+    try:
+        result = pipe(text[:512])[0]
+    except Exception:
+        return _fallback_rule_sentiment(text)
+
+    raw_label = str(result.get("label", "")).lower().strip()
+    score = round(float(result.get("score", 0.0)), 4)
+
+    if "pos" in raw_label or raw_label in {"label_2", "2"}:
+        label = "positive"
+    elif "neg" in raw_label or raw_label in {"label_0", "0"}:
+        label = "negative"
+    else:
+        label = "neutral"
+
+    return {
+        "label": label,
+        "score": score,
+        "emoji": "+" if label == "positive" else "-" if label == "negative" else "N",
+    }
+
+
+def analyze_roberta_bulk(texts: list[str]) -> list[dict]:
+    """Analyze a list of texts using batch processing with RoBERTa and return list of label/score dicts."""
+    if not texts:
+        return []
+
+    pipe = _get_roberta_pipeline()
+    if pipe is None:
+        return [_fallback_rule_sentiment(text) for text in texts]
+
+    cleaned_texts = [text[:512] for text in texts]
+    results = []
+    
+    try:
+        batch_results = pipe(cleaned_texts, batch_size=16)
+        
+        for result in batch_results:
+            raw_label = str(result.get("label", "")).lower().strip()
+            score = round(float(result.get("score", 0.0)), 4)
+
+            if "pos" in raw_label or raw_label in {"label_2", "2"}:
+                label = "positive"
+            elif "neg" in raw_label or raw_label in {"label_0", "0"}:
                 label = "negative"
             else:
                 label = "neutral"

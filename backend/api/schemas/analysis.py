@@ -62,7 +62,7 @@ class RepliesResponse(BaseModel):
 
 class SentimentCompareRequest(BaseModel):
     matched_groups: list[AnalysisGroup]
-    algorithms: list[str] = Field(default_factory=lambda: ["bert", "hybrid"])
+    algorithms: list[str] = Field(default_factory=lambda: ["bert", "roberta", "hybrid"])
     save_to_json: bool = True
     run_id: str | None = None
 

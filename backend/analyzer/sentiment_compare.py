@@ -18,6 +18,17 @@ def _load_bert_analyzer():
 _BERT_ANALYZER, _BERT_BACKEND_NAME = _load_bert_analyzer()
 
 
+def _load_roberta_analyzer():
+    try:
+        from backend.analyzer.sentiment import analyze_roberta
+        return analyze_roberta
+    except Exception:
+        return None
+
+
+_ROBERTA_ANALYZER = _load_roberta_analyzer()
+
+
 def _bert_label(text: str) -> tuple[str, float]:
     if _BERT_ANALYZER is not None:
         try:
@@ -40,6 +51,19 @@ def _bert_label(text: str) -> tuple[str, float]:
     return "neutral", 0.5
 
 
+def _roberta_label(text: str) -> tuple[str, float]:
+    if _ROBERTA_ANALYZER is not None:
+        try:
+            result = _ROBERTA_ANALYZER(text)
+            label = str(result.get("label", "neutral")).lower()
+            score = float(result.get("score", 0.5))
+            return label, score
+        except Exception:
+            pass
+
+    return "neutral", 0.5
+
+
 def _hybrid_label(text: str) -> tuple[str, float]:
     bert_label, bert_score = _bert_label(text)
 
@@ -55,6 +79,8 @@ def _classify(name: str, text: str) -> tuple[str, float]:
         return _bert_label(text)
     if name == "hybrid":
         return _hybrid_label(text)
+    if name == "roberta":
+        return _roberta_label(text)
     raise ValueError(f"Unknown algorithm: {name}")
 
 
@@ -92,7 +118,7 @@ def _empty_summary() -> dict:
 def compare_replies(replies: list[dict], algorithms: list[str]) -> dict:
     normalized_algorithms = [item.strip().lower() for item in algorithms if item.strip()]
     if not normalized_algorithms:
-        normalized_algorithms = ["bert", "hybrid", "groq", "gemini"]
+        normalized_algorithms = ["bert", "roberta", "hybrid", "groq", "gemini"]
 
     # Expand legacy "api" into both LLMs for backwards compatibility.
     if _LEGACY_API_ALGORITHM in normalized_algorithms:
@@ -168,6 +194,8 @@ def compare_replies(replies: list[dict], algorithms: list[str]) -> dict:
         total = len(items)
         if algorithm == "bert":
             engine_name = bert_engine
+        elif algorithm == "roberta":
+            engine_name = "roberta-model"
         elif algorithm == "hybrid":
             engine_name = f"hybrid({bert_engine}+confidence-gate)"
         elif algorithm == "groq":
@@ -210,7 +238,7 @@ def compare_group_replies(replies_by_channel: dict[str, list[dict]], algorithms:
     """
     normalized_algorithms = [item.strip().lower() for item in algorithms if item.strip()]
     if not normalized_algorithms:
-        normalized_algorithms = ["bert", "hybrid", "groq", "gemini"]
+        normalized_algorithms = ["bert", "roberta", "hybrid", "groq", "gemini"]
 
     if _LEGACY_API_ALGORITHM in normalized_algorithms:
         normalized_algorithms = [a for a in normalized_algorithms if a != _LEGACY_API_ALGORITHM]
@@ -250,10 +278,11 @@ def compare_group_replies(replies_by_channel: dict[str, list[dict]], algorithms:
             llm_errors[alg] = f"Beklenmeyen hata: {exc.__class__.__name__}"
 
     try:
-        from backend.analyzer.sentiment import analyze_sentiment_bulk, get_sentiment_backend_name
+        from backend.analyzer.sentiment import analyze_sentiment_bulk, analyze_roberta_bulk, get_sentiment_backend_name
         bert_engine = get_sentiment_backend_name()
     except Exception:
         analyze_sentiment_bulk = lambda texts: [{"label": "neutral", "score": 0.5, "emoji": "N"} for _ in texts]
+        analyze_roberta_bulk = lambda texts: [{"label": "neutral", "score": 0.5, "emoji": "N"} for _ in texts]
         bert_engine = "fallback-rule"
 
     clean_texts = []
@@ -262,6 +291,9 @@ def compare_group_replies(replies_by_channel: dict[str, list[dict]], algorithms:
         clean_texts.append(t if len(t) >= 2 else "")
 
     bulk_results = analyze_sentiment_bulk(clean_texts)
+    roberta_bulk_results = []
+    if "roberta" in normalized_algorithms:
+        roberta_bulk_results = analyze_roberta_bulk(clean_texts)
 
     channel_results = {
         ch: {
@@ -299,6 +331,12 @@ def compare_group_replies(replies_by_channel: dict[str, list[dict]], algorithms:
                 label, score = llm_results.get(alg, {}).get(global_idx, (bert_label, bert_score))
             elif alg == "bert":
                 label, score = bert_label, bert_score
+            elif alg == "roberta":
+                if roberta_bulk_results:
+                    res = roberta_bulk_results[global_idx]
+                    label, score = res["label"], res["score"]
+                else:
+                    label, score = "neutral", 0.5
             elif alg == "hybrid":
                 label, score = hybrid_label, hybrid_score
             else:
@@ -321,6 +359,10 @@ def compare_group_replies(replies_by_channel: dict[str, list[dict]], algorithms:
 
             if alg == "bert":
                 engine_name = bert_engine
+                available = True
+                error_msg = None
+            elif alg == "roberta":
+                engine_name = "roberta-model"
                 available = True
                 error_msg = None
             elif alg == "hybrid":
