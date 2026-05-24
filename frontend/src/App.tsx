@@ -13,6 +13,7 @@ import i18n, { getIntlLocaleTag } from './i18n'
 import type { SupportedLocale } from './i18n'
 import { useTheme } from './theme/ThemeProvider'
 import { AvatarGroup } from './components/ui/avatar-group'
+import { getChannelLogoUrl, setChannelLogoUrl } from './lib/channelLogos'
 import type {
   MatchResponse,
   RepliesResponse,
@@ -104,6 +105,20 @@ function buildLetterAvatarDataUrl(letter: string, seed: string) {
 </svg>`
 
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function cacheChannelLogosFromMatch(response: MatchResponse): boolean {
+  let changed = false
+  response.matched_groups.forEach((group) => {
+    group.tweets.forEach((tweet) => {
+      const channel = tweet.channel?.trim()
+      const logo = tweet.profile_image_url?.trim()
+      if (!channel || !logo) return
+      setChannelLogoUrl(channel, logo)
+      changed = true
+    })
+  })
+  return changed
 }
 
 /* ========== SVG Icons ========== */
@@ -416,6 +431,7 @@ export default function App() {
   const [matchResult, setMatchResult] = useState<MatchResponse | null>(null)
   const [repliesResult, setRepliesResult] = useState<RepliesResponse | null>(null)
   const [compareResult, setCompareResult] = useState<SentimentCompareResponse | null>(null)
+  const [channelLogoVersion, setChannelLogoVersion] = useState(0)
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0)
   const [selectedTweetIndex, setSelectedTweetIndex] = useState(0)
   const [selectedAlgorithmKey, setSelectedAlgorithmKey] = useState<string>(ALGORITHM_ORDER[0]?.key ?? 'bert')
@@ -642,6 +658,9 @@ export default function App() {
         min_channels_for_match: Number(minChannelsForMatch) || 2,
         twitter_bearer_token: twitterBearerToken.trim(),
       })
+      if (cacheChannelLogosFromMatch(response)) {
+        setChannelLogoVersion((version) => version + 1)
+      }
       setMatchResult(response)
       setCurrentRunId(response.run_id ?? null)
     } catch (requestError) {
@@ -743,6 +762,15 @@ export default function App() {
     try {
       const detail = await getRun(runId)
       const matched = detail.matched_groups
+      const archivedMatch = {
+        matched_groups: matched,
+        total_groups: detail.total_groups,
+        status: 'archived',
+        run_id: detail.run_id,
+      }
+      if (cacheChannelLogosFromMatch(archivedMatch)) {
+        setChannelLogoVersion((version) => version + 1)
+      }
       setMatchResult({
         matched_groups: matched,
         total_groups: detail.total_groups,
@@ -1008,9 +1036,12 @@ export default function App() {
               const showBadge = hasValue && displayName && !isEditing
               return (
                 <div className="channel-badge" key={`channel-${index}`}>
-                  <div className="channel-avatar">
-                    {hasValue && displayName ? displayName.slice(0, 1).toUpperCase() : '?'}
-                  </div>
+                  <ChannelAvatar
+                    key={`channel-input-avatar-${displayName}-${channelLogoVersion}`}
+                    channel={displayName}
+                    className="channel-avatar"
+                    size={32}
+                  />
                   {showBadge ? (
                     <div
                       className="channel-info"
@@ -1171,7 +1202,7 @@ export default function App() {
                         <div className="archive-card-channels">
                           {run.channels.map((ch) => (
                             <span className="source-badge" key={`${run.run_id}-${ch}`}>
-                              <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
+                              <ChannelAvatar key={`archive-avatar-${ch}-${channelLogoVersion}`} channel={ch} className="source-badge-avatar" size={20} />
                               @{ch}
                             </span>
                           ))}
@@ -1269,7 +1300,7 @@ export default function App() {
                   <div className="archive-card-channels" style={{ marginBottom: '20px' }}>
                     {Array.from(new Set(archiveRuns.flatMap((r) => r.channels))).map((ch) => (
                       <span className="source-badge" key={ch}>
-                        <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
+                        <ChannelAvatar key={`report-avatar-${ch}-${channelLogoVersion}`} channel={ch} className="source-badge-avatar" size={20} />
                         @{ch}
                       </span>
                     ))}
@@ -1518,8 +1549,9 @@ export default function App() {
                                   avatars={group.tweets.map((tw, idx) => {
                                     const ch = tw.channel ? `@${tw.channel}` : `#${idx + 1}`
                                     const letter = ch.replace('@', '').slice(0, 1).toUpperCase()
-                                    const src = buildLetterAvatarDataUrl(letter, ch)
-                                    return { src, label: ch }
+                                    const fallbackSrc = buildLetterAvatarDataUrl(letter, ch)
+                                    const src = (tw.channel ? getChannelLogoUrl(tw.channel) : null) || tw.profile_image_url || fallbackSrc
+                                    return { src, label: ch, fallbackSrc }
                                   })}
                                   maxVisible={4}
                                   size={30}
@@ -1729,7 +1761,7 @@ export default function App() {
               <div className="summary-channels">
                 {selectedGroup.channels.map((ch) => (
                   <span className="source-badge" key={ch}>
-                    <ChannelAvatar channel={ch} className="source-badge-avatar" size={20} />
+                    <ChannelAvatar key={`summary-avatar-${ch}-${channelLogoVersion}`} channel={ch} className="source-badge-avatar" size={20} />
                     @{ch}
                   </span>
                 ))}

@@ -511,6 +511,7 @@ def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -
     all_tweets = []
     for ch in channels_data:
         username = ch["username"]
+        profile_image_url = ch.get("profile_image_url", "")
         for tw in ch.get("tweets", []):
             all_tweets.append({
                 "channel": username,
@@ -521,6 +522,7 @@ def match_news(channels_data: list[dict], api_key: str, min_channels: int = 2) -
                 "replies": tw.get("replies", 0),
                 "retweets": tw.get("retweets", 0),
                 "date_formatted": tw.get("date_formatted", ""),
+                "profile_image_url": tw.get("profile_image_url") or profile_image_url,
                 "media": tw.get("media", []),
             })
     

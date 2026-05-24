@@ -121,8 +121,14 @@ def _get_guest_session(bearer_token: str | None = None) -> requests.Session:
     return session
 
 
-def _get_user_id(session: requests.Session, username: str) -> str:
-    """GraphQL ile kullanıcı ID'sini al."""
+def _normalize_profile_image_url(url: str | None) -> str:
+    if not url:
+        return ""
+    return url.replace("_normal.", "_400x400.")
+
+
+def _get_user_info(session: requests.Session, username: str) -> dict:
+    """GraphQL ile kullanıcı ID'sini ve profil görselini al."""
     params = {
         "variables": json.dumps({"screen_name": username, "withSafetyModeUserFields": True}),
         "features": json.dumps(USER_FEATURES),
@@ -131,7 +137,12 @@ def _get_user_id(session: requests.Session, username: str) -> str:
     r = session.get(url, params=params, timeout=10)
     r.raise_for_status()
     data = r.json()
-    return data["data"]["user"]["result"]["rest_id"]
+    user_result = data["data"]["user"]["result"]
+    legacy = user_result.get("legacy") or {}
+    return {
+        "id": user_result["rest_id"],
+        "profile_image_url": _normalize_profile_image_url(legacy.get("profile_image_url_https")),
+    }
 
 
 def extract_username(url_or_username: str) -> str:
@@ -159,13 +170,15 @@ def fetch_user_tweets(username_or_url: str, count: int = 10, bearer_token: str |
         dict: username, tweets listesi, error
     """
     username = extract_username(username_or_url)
-    result = {"username": username, "tweets": [], "error": None}
+    result = {"username": username, "profile_image_url": "", "tweets": [], "error": None}
 
     try:
         session = _get_guest_session(bearer_token)
 
-        # 1) Kullanıcı ID'sini al
-        user_id = _get_user_id(session, username)
+        # 1) Kullanıcı ID'sini ve profil görselini al
+        user_info = _get_user_info(session, username)
+        user_id = user_info["id"]
+        result["profile_image_url"] = user_info.get("profile_image_url", "")
 
         # 2) Tweetleri çek
         variables = {
@@ -269,6 +282,7 @@ def fetch_user_tweets(username_or_url: str, count: int = 10, bearer_token: str |
                     "replies": replies,
                     "quotes": quotes,
                     "url": f"https://x.com/{username}/status/{tweet_id}",
+                    "profile_image_url": result["profile_image_url"],
                     "media": media,
                 })
 

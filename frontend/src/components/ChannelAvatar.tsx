@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { getChannelLogoUrl } from '../lib/channelLogos'
 
 type ChannelAvatarProps = {
@@ -9,10 +9,11 @@ type ChannelAvatarProps = {
 }
 
 export function ChannelAvatar({ channel, fallbackText, className, size = 20 }: ChannelAvatarProps) {
+  const [imageFailed, setImageFailed] = useState(false)
   const logo = getChannelLogoUrl(channel)
   const letter = (fallbackText ?? channel.replace(/^@/, '').slice(0, 1) ?? '?').toUpperCase()
 
-  if (logo) {
+  if (logo && !imageFailed) {
     return (
       <img
         className={className ? `channel-avatar-img ${className}` : 'channel-avatar-img'}
@@ -21,8 +22,8 @@ export function ChannelAvatar({ channel, fallbackText, className, size = 20 }: C
         width={size}
         height={size}
         loading="lazy"
-        onError={(e) => {
-          ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+        onError={() => {
+          setImageFailed(true)
         }}
       />
     )

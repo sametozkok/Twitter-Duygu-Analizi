@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export interface AvatarGroupProps {
-  avatars: { src: string; alt?: string; label?: string }[];
+  avatars: { src: string; alt?: string; label?: string; fallbackSrc?: string }[];
   maxVisible?: number;
   size?: number;
   overlap?: number;
@@ -79,6 +79,11 @@ const AvatarGroup = ({
                 height={size}
                 className="rounded-full object-cover"
                 draggable={false}
+                onError={(event) => {
+                  if (avatar.fallbackSrc && event.currentTarget.src !== avatar.fallbackSrc) {
+                    event.currentTarget.src = avatar.fallbackSrc;
+                  }
+                }}
               />
               <AnimatePresence>
                 {isHovered && avatar.label && (

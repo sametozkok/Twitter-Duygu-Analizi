@@ -21,6 +21,7 @@ export type TweetItem = {
   replies?: number
   retweets?: number
   date_formatted?: string
+  profile_image_url?: string
   media?: TweetMedia[]
 }
 
