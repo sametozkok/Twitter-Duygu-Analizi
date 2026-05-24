@@ -1416,6 +1416,7 @@ body.is-resizing {
   font-weight: 700;
   font-size: 13px;
   flex-shrink: 0;
+  object-fit: cover;
 }
 
 .reply-user {

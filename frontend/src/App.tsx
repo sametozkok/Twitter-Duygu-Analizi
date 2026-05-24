@@ -107,6 +107,36 @@ function buildLetterAvatarDataUrl(letter: string, seed: string) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 }
 
+function extractImageUrl(value?: string) {
+  const raw = value?.trim()
+  if (!raw) return ''
+  const match = raw.match(/https?:\/\/[^'"\s}]+/)
+  return match?.[0] ?? raw
+}
+
+function renderReplyAvatar(reply: { user?: string; name?: string; profile_image_url?: string }) {
+  const identity = reply.user || reply.name || '?'
+  const letter = identity.slice(0, 1).toUpperCase()
+  const fallbackSrc = buildLetterAvatarDataUrl(letter, identity)
+  const src = extractImageUrl(reply.profile_image_url) || fallbackSrc
+
+  return (
+    <img
+      className="reply-avatar"
+      src={src}
+      alt=""
+      width={32}
+      height={32}
+      loading="lazy"
+      onError={(event) => {
+        if (event.currentTarget.src !== fallbackSrc) {
+          event.currentTarget.src = fallbackSrc
+        }
+      }}
+    />
+  )
+}
+
 function cacheChannelLogosFromMatch(response: MatchResponse): boolean {
   let changed = false
   response.matched_groups.forEach((group) => {
@@ -1672,7 +1702,7 @@ export default function App() {
                                   {filteredReplies.map((reply, replyIndex) => (
                                     <article className="reply-card" key={`${group.topic}-all-${replyIndex}`}>
                                       <div className="reply-header">
-                                        <div className="reply-avatar">{(reply.user || reply.name || '?').slice(0, 1).toUpperCase()}</div>
+                                        {renderReplyAvatar(reply)}
                                         <div className="reply-user">
                                           <span className="reply-name">{reply.name || t('common:unknown')}</span>
                                           <span className="reply-handle">@{reply.user || '-'}</span>

@@ -61,6 +61,46 @@ def _extract_view_count(tweet_obj: dict, legacy: dict) -> int:
     return _safe_int(legacy.get("view_count"))
 
 
+def _normalize_profile_image_url(value: object) -> str:
+    if not value:
+        return ""
+    if isinstance(value, dict):
+        return _extract_profile_image_url(value)
+
+    raw = str(value).strip()
+    match = re.search(r"https?://[^'\"\s}]+", raw)
+    url = match.group(0) if match else raw
+    return url.replace("_normal.", "_400x400.").strip()
+
+
+def _extract_profile_image_url(*candidates: object) -> str:
+    """Farkli endpoint formatlarindan profil gorseli URL'sini cikar."""
+    keys = (
+        "profile_image_url_https",
+        "profile_image_url",
+        "profileImageUrlHttps",
+        "profileImageUrl",
+        "avatar",
+        "avatar_url",
+        "image",
+        "image_url",
+        "url",
+    )
+    for cand in candidates:
+        if not isinstance(cand, dict):
+            continue
+        for key in keys:
+            url = _normalize_profile_image_url(cand.get(key))
+            if url:
+                return url
+        nested_profile = cand.get("profile")
+        if isinstance(nested_profile, dict):
+            url = _extract_profile_image_url(nested_profile)
+            if url:
+                return url
+    return ""
+
+
 def _extract_user_fields(raw_user: dict | str | None, fallback_user: str = "") -> tuple[str, str]:
     """Farkli endpoint formatlarindan username/name alanlarini guvenli cikar."""
     if isinstance(raw_user, str):
@@ -291,6 +331,14 @@ def _parse_tweet_result(item: dict, original_tweet_id: str) -> dict | None:
         tw.get("user", {}),
         tw.get("author", {}),
     )
+    profile_image_url = _extract_profile_image_url(
+        user_legacy,
+        core,
+        core.get("core", {}),
+        core.get("profile", {}),
+        tw.get("user", {}),
+        tw.get("author", {}),
+    )
 
     # Bazı şemalarda fallback username farklı alanlarda olabilir.
     if not user:
@@ -313,6 +361,7 @@ def _parse_tweet_result(item: dict, original_tweet_id: str) -> dict | None:
         "text": text,
         "user": user,
         "name": name,
+        "profile_image_url": profile_image_url,
         "date": legacy.get("created_at", ""),
         "likes": likes,
         "retweets": retweets,
@@ -366,10 +415,15 @@ def _try_syndication_conversation(tweet_id: str) -> list[dict]:
                                     or ""
                                 ),
                             )
+                            profile_image_url = _extract_profile_image_url(
+                                tw.get("user", {}),
+                                tw,
+                            )
                             replies.append({
                                 "text": text,
                                 "user": user,
                                 "name": name,
+                                "profile_image_url": profile_image_url,
                                 "date": tw.get("created_at", ""),
                                 "likes": _safe_int(tw.get("favorite_count", 0)),
                                 "retweets": _safe_int(tw.get("retweet_count", 0)),
@@ -409,10 +463,15 @@ def _try_cdn_tweet(tweet_id: str) -> list[dict]:
                         tweet.get("user", {}),
                         fallback_user=tweet.get("screen_name", ""),
                     )
+                    profile_image_url = _extract_profile_image_url(
+                        tweet.get("user", {}),
+                        tweet,
+                    )
                     replies.append({
                         "text": text,
                         "user": user,
                         "name": name,
+                        "profile_image_url": profile_image_url,
                         "date": tweet.get("created_at", ""),
                         "likes": _safe_int(tweet.get("favorite_count", 0)),
                         "retweets": _safe_int(tweet.get("retweet_count", 0)),

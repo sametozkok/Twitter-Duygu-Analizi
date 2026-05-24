@@ -29,6 +29,7 @@ export type ReplyItem = {
   text?: string
   user?: string
   name?: string
+  profile_image_url?: string
   date?: string
   likes?: number
   views?: number
